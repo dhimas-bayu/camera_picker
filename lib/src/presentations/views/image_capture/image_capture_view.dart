@@ -117,7 +117,7 @@ class _ImageCaptureViewState extends State<ImageCaptureView> {
 
     return CustomPaint(
       size: _size!,
-      painter: OverlayPainter(
+      painter: CameraOverlayPainter(
         boundingBox: _boundingBox,
         radius: const Radius.circular(8.0),
       ),

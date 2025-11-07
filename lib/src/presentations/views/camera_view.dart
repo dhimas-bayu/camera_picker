@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
+import 'package:camera_picker/src/core/models/data_video_camera.dart';
+import 'package:camera_picker/src/presentations/widgets/record_button.dart';
 import '../../core/models/data_stream_camera.dart';
 import '../../core/models/data_take_camera.dart';
 import '../viewmodels/camera_viewmodel.dart';
@@ -22,9 +24,11 @@ class CameraView extends StatefulWidget {
     required this.cameras,
     this.initCamera,
     this.overlay,
+    this.recordingDuration,
     this.targetStreamFPS = 10,
     this.onTakePicture,
     this.onStreamCamera,
+    this.onRecordVideo,
   }) : assert(
          cameras.isNotEmpty,
          "Cameras list cannot be empty.",
@@ -34,9 +38,11 @@ class CameraView extends StatefulWidget {
   final List<CameraDescription> cameras;
   final CameraDescription? initCamera;
   final Widget? overlay;
+  final Duration? recordingDuration;
   final int targetStreamFPS;
   final ValueChanged<DataTakeCamera?>? onTakePicture;
   final ValueChanged<DataStreamCamera?>? onStreamCamera;
+  final ValueChanged<DataVideoCamera?>? onRecordVideo;
 
   @override
   State<CameraView> createState() => _CameraViewState();
@@ -84,14 +90,11 @@ class _CameraViewState extends State<CameraView>
 
   DataTakeCamera _dataTakeCamera = const DataTakeCamera();
 
+  DataVideoCamera _dataVideoCamera = const DataVideoCamera();
+
   @override
   void initState() {
     super.initState();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
-
     WidgetsBinding.instance.addObserver(this);
     _initCamera(description: widget.initCamera);
   }
@@ -143,7 +146,7 @@ class _CameraViewState extends State<CameraView>
             _previewSize = Size(width, height);
 
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              notifier?.setPreviewSize(_previewSize);
+              notifier?.setPreviewSize(constraints.biggest);
             });
 
             return Stack(
@@ -168,47 +171,71 @@ class _CameraViewState extends State<CameraView>
     return Align(
       alignment: Alignment.bottomCenter,
       child: switch (widget.action) {
-        CameraAction.takePicture => Padding(
-          padding: const EdgeInsets.only(
-            bottom: 32.0,
-            left: 16.0,
-            right: 16.0,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              CameraSwitcher(
-                controller: _controller,
-                onSwitchCamera: _handleSwitchCamera,
-              ),
-              CaptureButton(
-                controller: _controller,
-                onTakePicture: _handleTakePicture,
-              ),
-              FlashModeSwitcher(
-                controller: _controller,
-                onSwitchFlash: _handleSwitchFlashMode,
-              ),
-            ],
-          ),
-        ),
-        CameraAction.scanBarcode => Padding(
-          padding: const EdgeInsets.only(
-            bottom: 44.0,
-            left: 16.0,
-            right: 16.0,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              FlashModeSwitcher(
-                controller: _controller,
-                onSwitchFlash: _handleSwitchFlashMode,
-              ),
-            ],
-          ),
-        ),
+        CameraAction.takePicture => _takePictureNavigation(),
+        CameraAction.scanBarcode => _scanBarcodeNavigation(),
+        CameraAction.videoRecord => _recordVideoNavigation(),
       },
+    );
+  }
+
+  Widget _takePictureNavigation() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 32.0, left: 16.0, right: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          CameraSwitcher(
+            controller: _controller,
+            onSwitchCamera: _handleSwitchCamera,
+          ),
+          CaptureButton(
+            controller: _controller,
+            onTakePicture: _handleTakePicture,
+          ),
+          FlashModeSwitcher(
+            controller: _controller,
+            onSwitchFlash: _handleSwitchFlashMode,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _recordVideoNavigation() {
+    final duration = widget.recordingDuration ?? const Duration(seconds: 10);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 30.0, left: 16.0, right: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          RecordButton(
+            recordDuration: duration,
+            controller: _controller,
+            onStartRecording: _handleStartRecording,
+            onStopRecording: _handleStopRecording,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _scanBarcodeNavigation() {
+    return Padding(
+      padding: const EdgeInsets.only(
+        bottom: 44.0,
+        left: 16.0,
+        right: 16.0,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          FlashModeSwitcher(
+            controller: _controller,
+            onSwitchFlash: _handleSwitchFlashMode,
+          ),
+        ],
+      ),
     );
   }
 
@@ -315,6 +342,33 @@ class _CameraViewState extends State<CameraView>
         );
 
         widget.onTakePicture?.call(_dataTakeCamera);
+      },
+    );
+  }
+
+  Future<void> _handleStartRecording() async {
+    await callbackWrapper<void>(
+      "START RECORDING VIDEO",
+      controller: _controller,
+      callback: (controller) async {
+        if (controller.value.isRecordingVideo) return;
+        await controller.startVideoRecording();
+      },
+    );
+  }
+
+  Future<void> _handleStopRecording() async {
+    await callbackWrapper<void>(
+      "STOP RECORDING VIDEO",
+      controller: _controller,
+      callback: (controller) async {
+        if (!controller.value.isRecordingVideo) return;
+        final videoFile = await controller.stopVideoRecording();
+        _dataVideoCamera = _dataVideoCamera.copyWith(
+          videoFile: File(videoFile.path),
+        );
+
+        widget.onRecordVideo?.call(_dataVideoCamera);
       },
     );
   }

@@ -2,19 +2,24 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'src/core/models/camera_config.dart';
 import 'src/presentations/viewmodels/camera_size_notifier.dart';
 import 'src/presentations/viewmodels/camera_viewmodel.dart';
 import 'src/presentations/views/barcode_scanner/barcode_scanner_view.dart';
 import 'src/presentations/views/image_capture/image_capture_view.dart';
+import 'src/presentations/views/video_record/video_record_view.dart';
 
-export 'src/presentations/painters/overlay_painter.dart';
+export 'src/presentations/painters/camera_overlay_painter.dart';
 
-enum CameraAction { takePicture, scanBarcode }
+enum CameraAction { takePicture, scanBarcode, videoRecord }
 
 class CameraPicker extends StatefulWidget {
-  const CameraPicker._({required this.action, required this.config});
+  const CameraPicker._({
+    required this.action,
+    required this.config,
+  });
   final CameraAction action;
   final Config config;
 
@@ -22,36 +27,42 @@ class CameraPicker extends StatefulWidget {
     BuildContext context, {
     CameraConfig? config,
   }) async {
-    File? imageFile;
-    if (context.mounted) {
-      imageFile = await Navigator.of(context).push<File?>(
-        MaterialPageRoute(
-          builder: (context) => CameraPicker._(
-            action: CameraAction.takePicture,
-            config: config ?? const CameraConfig(),
-          ),
+    return await Navigator.of(context, rootNavigator: true).push<File?>(
+      MaterialPageRoute(
+        builder: (context) => CameraPicker._(
+          action: CameraAction.takePicture,
+          config: config ?? const CameraConfig(),
         ),
-      );
-    }
-    return imageFile;
+      ),
+    );
   }
 
   static Future<String?> scanBarcode(
     BuildContext context, {
     StreamCameraConfig? config,
   }) async {
-    String? barcodeResult;
-    if (context.mounted) {
-      barcodeResult = await Navigator.of(context).push<String?>(
-        MaterialPageRoute(
-          builder: (context) => CameraPicker._(
-            action: CameraAction.scanBarcode,
-            config: config ?? const StreamCameraConfig(),
-          ),
+    return await Navigator.of(context, rootNavigator: true).push<String?>(
+      MaterialPageRoute(
+        builder: (context) => CameraPicker._(
+          action: CameraAction.scanBarcode,
+          config: config ?? const StreamCameraConfig(),
         ),
-      );
-    }
-    return barcodeResult;
+      ),
+    );
+  }
+
+  static Future<File?> videoRecord(
+    BuildContext context, {
+    VideoConfig? config,
+  }) async {
+    return await Navigator.of(context, rootNavigator: true).push<File?>(
+      MaterialPageRoute(
+        builder: (context) => CameraPicker._(
+          action: CameraAction.videoRecord,
+          config: config ?? const VideoConfig(),
+        ),
+      ),
+    );
   }
 
   @override
@@ -60,6 +71,15 @@ class CameraPicker extends StatefulWidget {
 
 class _CameraPickerState extends State<CameraPicker> {
   final CameraSizeNotifier _notifier = CameraSizeNotifier();
+
+  @override
+  void initState() {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    super.initState();
+  }
 
   @override
   void dispose() {
@@ -80,9 +100,7 @@ class _CameraPickerState extends State<CameraPicker> {
               future: availableCameras(),
               builder: (context, asyncSnapshot) {
                 if (asyncSnapshot.connectionState != ConnectionState.done) {
-                  return const Center(
-                    child: CircularProgressIndicator(year2023: false),
-                  );
+                  return const SizedBox.shrink();
                 }
 
                 switch (widget.action) {
@@ -100,6 +118,14 @@ class _CameraPickerState extends State<CameraPicker> {
                       config: widget.config as StreamCameraConfig,
                       onBarcodeScanned: (value) {
                         Navigator.pop(context, value);
+                      },
+                    );
+                  case CameraAction.videoRecord:
+                    return VideoRecordView(
+                      cameras: asyncSnapshot.requireData,
+                      config: widget.config as VideoConfig,
+                      onRecorded: (file) {
+                        Navigator.pop(context, file);
                       },
                     );
                 }

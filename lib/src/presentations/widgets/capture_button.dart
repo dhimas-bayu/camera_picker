@@ -30,7 +30,7 @@ class CaptureButton extends StatelessWidget {
       style: IconButton.styleFrom(
         backgroundColor: Colors.white38,
         foregroundColor: Colors.white,
-        // side: const BorderSide(color: Colors.white),
+        side: const BorderSide(color: Colors.white),
         fixedSize: const Size.square(72.0),
       ),
       onPressed: onTakePicture,

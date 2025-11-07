@@ -47,7 +47,7 @@ class ImageFilePreview extends StatelessWidget {
           ),
           ConfirmButton(
             action: ConfirmAction.accept,
-            onAction: onRejected,
+            onAction: onAccepted,
           ),
         ],
       ),

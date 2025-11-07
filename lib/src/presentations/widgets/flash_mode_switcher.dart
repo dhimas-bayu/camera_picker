@@ -30,7 +30,7 @@ class FlashModeSwitcher extends StatelessWidget {
       style: IconButton.styleFrom(
         backgroundColor: Colors.white38,
         foregroundColor: Colors.white,
-        //side: const BorderSide(color: Colors.white),
+        side: const BorderSide(color: Colors.white),
         fixedSize: const Size.square(48.0),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.0),
