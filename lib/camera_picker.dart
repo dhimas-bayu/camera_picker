@@ -10,6 +10,7 @@ import 'src/presentations/views/image_capture/image_capture_view.dart';
 import 'src/presentations/views/video_record/video_record_view.dart';
 
 export 'src/presentations/painters/camera_overlay_painter.dart';
+export 'src/core/models/camera_config.dart';
 
 enum CameraMode { takePicture, scanBarcode, videoRecord }
 
