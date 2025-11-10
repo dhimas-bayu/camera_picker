@@ -11,7 +11,7 @@ class ConfirmButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       style: IconButton.styleFrom(
-        backgroundColor: Colors.white38,
+        backgroundColor: Colors.white24,
         foregroundColor: Colors.white,
         side: const BorderSide(color: Colors.white),
         fixedSize: const Size.square(48.0),

@@ -12,31 +12,32 @@ class CameraSwitcher extends StatelessWidget {
   Widget build(BuildContext context) {
     if (controller == null) return const SizedBox.shrink();
 
-    return IconButton(
-      icon: ValueListenableBuilder<CameraValue>(
-        valueListenable: controller!,
-        builder: (context, value, child) {
-          final description = value.description;
-          final turn = description.lensDirection == CameraLensDirection.front
-              ? 45.0
-              : 90.0;
-          return AnimatedRotation(
+    return ValueListenableBuilder<CameraValue>(
+      valueListenable: controller!,
+      builder: (context, value, child) {
+        final isRecording = value.isRecordingVideo;
+        final lensDirection = value.description.lensDirection;
+        final turn = lensDirection == CameraLensDirection.front ? 45.0 : 90.0;
+        final color = isRecording ? Colors.grey : Colors.white;
+
+        return IconButton(
+          icon: AnimatedRotation(
             duration: Durations.medium4,
             turns: degreesToRadians(turn),
-            child: const Icon(Icons.cached_rounded),
-          );
-        },
-      ),
-      style: IconButton.styleFrom(
-        backgroundColor: Colors.white38,
-        foregroundColor: Colors.white,
-        side: const BorderSide(color: Colors.white),
-        fixedSize: const Size.square(48.0),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.0),
-        ),
-      ),
-      onPressed: _handleSwitchCamera,
+            child: Icon(Icons.cached_rounded, color: color),
+          ),
+          style: IconButton.styleFrom(
+            backgroundColor: Colors.white24,
+            foregroundColor: Colors.white,
+            side: BorderSide(color: color),
+            fixedSize: const Size.square(48.0),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.0),
+            ),
+          ),
+          onPressed: isRecording ? null : _handleSwitchCamera,
+        );
+      },
     );
   }
 

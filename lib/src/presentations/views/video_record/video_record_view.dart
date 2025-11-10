@@ -3,12 +3,9 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:camera_picker/src/presentations/views/video_record/video_preview.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 
 import '../../../../camera_picker.dart';
 import '../../../core/models/camera_config.dart';
-import '../../viewmodels/camera_size_notifier.dart';
-import '../../viewmodels/camera_viewmodel.dart';
 import '../camera_view.dart';
 
 class VideoRecordView extends StatefulWidget {
@@ -29,18 +26,8 @@ class VideoRecordView extends StatefulWidget {
 
 class _VideoRecordViewState extends State<VideoRecordView> {
   final ValueNotifier<File?> _videoFile = ValueNotifier(null);
-  late CameraSizeNotifier _notifier;
-  Size? _size;
   CameraDescription? _camera;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _notifier = CameraViewModel.of(context);
-    if (_size != _notifier.size) {
-      _size = _notifier.size;
-    }
-  }
+  FlashMode? _flashMode;
 
   @override
   void dispose() {
@@ -69,9 +56,16 @@ class _VideoRecordViewState extends State<VideoRecordView> {
         }
 
         return CameraView(
-          action: CameraAction.videoRecord,
+          mode: CameraMode.videoRecord,
           cameras: widget.cameras,
           initCamera: _camera,
+          initFlashMode: _flashMode ?? FlashMode.off,
+          onSwitchCamera: (value) {
+            _camera = value;
+          },
+          onSwitchFlash: (value) {
+            _flashMode = value;
+          },
           onRecordVideo: (value) {
             Future.delayed(Durations.medium2, () {
               _videoFile.value = value?.videoFile;

@@ -22,19 +22,23 @@ class RecordButton extends StatefulWidget {
 class _RecordButtonState extends State<RecordButton>
     with SingleTickerProviderStateMixin {
   final ValueNotifier<bool> _recordNotifier = ValueNotifier(false);
-  late AnimationController _animationController;
+  late AnimationController _controller;
   late Animation<double> _animation;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
+    _controller = AnimationController(
       vsync: this,
       duration: widget.recordDuration,
     );
 
-    _animation = Tween<double>(begin: 1, end: 0).animate(_animationController);
-    _animationController.addListener(_animateListener);
+    _animation = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(_controller);
+
+    _controller.addListener(_animateListener);
     widget.controller?.addListener(_cameraListener);
   }
 
@@ -42,19 +46,18 @@ class _RecordButtonState extends State<RecordButton>
   void dispose() {
     widget.controller?.removeListener(_cameraListener);
     _recordNotifier.dispose();
-    _animationController.removeListener(_animateListener);
-    _animationController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   void _cameraListener() {
-    _recordNotifier.value = widget.controller?.value.isRecordingVideo ?? false;
-    debugPrint("IS RECORDING : ${_recordNotifier.value}");
+    final isRecording = widget.controller?.value.isRecordingVideo;
+    _recordNotifier.value = isRecording ?? false;
   }
 
   void _animateListener() {
     if (_animation.isCompleted) {
-      _animationController.reset();
+      _controller.reset();
       widget.onStopRecording?.call();
     }
   }
@@ -68,11 +71,11 @@ class _RecordButtonState extends State<RecordButton>
       builder: (context, isRecording, child) {
         return GestureDetector(
           child: Container(
-            width: 64.0,
-            height: 64.0,
+            width: 72.0,
+            height: 72.0,
             decoration: const ShapeDecoration(
               shape: CircleBorder(),
-              color: Colors.white38,
+              color: Colors.white24,
             ),
             child: Stack(
               fit: StackFit.expand,
@@ -87,15 +90,19 @@ class _RecordButtonState extends State<RecordButton>
                   ),
                 ),
                 AnimatedContainer(
-                  duration: Durations.short4,
-                  width: 48.0,
-                  height: 48.0,
+                  duration: Durations.short2,
+                  width: isRecording ? 28.0 : 48.0,
+                  height: isRecording ? 28.0 : 48.0,
                   margin: isRecording
-                      ? const EdgeInsets.all(12.0)
+                      ? const EdgeInsets.all(16.0)
                       : const EdgeInsets.all(8.0),
                   decoration: ShapeDecoration(
                     color: isRecording ? Colors.red : Colors.white,
-                    shape: const CircleBorder(),
+                    shape: isRecording
+                        ? RoundedRectangleBorder(
+                            borderRadius: BorderRadiusGeometry.circular(12.0),
+                          )
+                        : const CircleBorder(),
                   ),
                 ),
               ],
@@ -103,10 +110,10 @@ class _RecordButtonState extends State<RecordButton>
           ),
           onTap: () {
             if (isRecording) {
-              _animationController.reset();
+              _controller.reset();
               widget.onStopRecording?.call();
             } else {
-              _animationController.forward();
+              _controller.forward();
               widget.onStartRecording?.call();
             }
           },

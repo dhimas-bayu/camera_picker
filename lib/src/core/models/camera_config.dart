@@ -31,7 +31,7 @@ class StreamCameraConfig extends Config {
 
   const StreamCameraConfig({
     super.showOverlay = true,
-    this.autoTracking = false,
+    this.autoTracking = true,
     this.targetFps = 10,
     this.enableLogging = kDebugMode,
   });

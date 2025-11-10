@@ -7,8 +7,6 @@ import 'package:flutter/widgets.dart';
 import '../../../../camera_picker.dart';
 import '../../../core/utils/image_utils.dart';
 import '../../../core/models/camera_config.dart';
-import '../../viewmodels/camera_size_notifier.dart';
-import '../../viewmodels/camera_viewmodel.dart';
 import '../camera_view.dart';
 import 'image_file_preview.dart';
 
@@ -29,19 +27,10 @@ class ImageCaptureView extends StatefulWidget {
 
 class _ImageCaptureViewState extends State<ImageCaptureView> {
   final ValueNotifier<File?> _imageFile = ValueNotifier(null);
-  late CameraSizeNotifier _notifier;
-  Size? _size;
+  Size? _layoutSize;
   Rect? _boundingBox;
   CameraDescription? _camera;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _notifier = CameraViewModel.of(context);
-    if (_size != _notifier.size) {
-      _size = _notifier.size;
-    }
-  }
+  FlashMode? _flashMode;
 
   @override
   void dispose() {
@@ -70,31 +59,33 @@ class _ImageCaptureViewState extends State<ImageCaptureView> {
         }
 
         return CameraView(
-          action: CameraAction.takePicture,
+          mode: CameraMode.takePicture,
           cameras: widget.cameras,
           initCamera: _camera,
-          overlay: _overlay(),
+          initFlashMode: _flashMode,
+          onPreviewBuilder: _buildOverlay,
+          onSwitchCamera: (description) {
+            _camera = description;
+          },
+          onSwitchFlash: (flashMode) {
+            _flashMode = flashMode;
+          },
           onTakePicture: (dataCamera) async {
             File? resultFile = dataCamera?.imageFile;
             if (resultFile != null &&
                 widget.config.autoCropping &&
                 _boundingBox != null &&
-                _size != null) {
+                _layoutSize != null) {
               final imageBytes = await resultFile.readAsBytes();
               resultFile = await ImageUtils.cropImageFromFile(
                 imageBytes: imageBytes,
                 screenRect: _boundingBox!,
-                displaySize: _size!,
+                displaySize: _layoutSize!,
                 quality: widget.config.quality,
                 flippedHorizontal:
-                    dataCamera?.lensDirection == CameraLensDirection.front,
+                    _camera?.lensDirection == CameraLensDirection.front,
               );
             }
-
-            _camera = widget.cameras.firstWhere((e) {
-              return e.lensDirection == dataCamera?.lensDirection;
-            });
-
             _imageFile.value = resultFile;
           },
         );
@@ -102,13 +93,13 @@ class _ImageCaptureViewState extends State<ImageCaptureView> {
     );
   }
 
-  Widget? _overlay() {
-    if (_size == null) return null;
-    final center = Offset(_size!.width / 2, _size!.height / 2);
+  Widget _buildOverlay(BuildContext context, Size size) {
+    _layoutSize = size;
+    final center = Offset(size.width / 2, size.height / 2);
     final docSize = OverlaySizeUtils.getSize(
       widget.config.overlayType ?? OverlayType.ktp,
     );
-    final overlaySize = docSize.toOverlaySize(_size!, scaleFactor: .8);
+    final overlaySize = docSize.toOverlaySize(size, scaleFactor: .8);
     _boundingBox = Rect.fromCenter(
       center: center,
       width: overlaySize.width,
@@ -116,7 +107,7 @@ class _ImageCaptureViewState extends State<ImageCaptureView> {
     );
 
     return CustomPaint(
-      size: _size!,
+      size: size,
       painter: CameraOverlayPainter(
         boundingBox: _boundingBox,
         radius: const Radius.circular(8.0),

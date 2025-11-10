@@ -5,11 +5,19 @@ import 'package:camera/camera.dart';
 Future<T?> callbackWrapper<T>(
   String key, {
   CameraController? controller,
+  bool isDisposed = false,
   Future<T> Function(CameraController)? callback,
   Function(Object)? onError,
   bool showLogDebug = true,
 }) async {
   try {
+    if (isDisposed) {
+      if (showLogDebug) {
+        development.log("[$key] ERROR : CAMERA CONTROLLER DISPOSED");
+      }
+      return null;
+    }
+
     if (controller == null) {
       if (showLogDebug) {
         development.log("[$key] ERROR : CAMERA CONTROLLER NOT SET");

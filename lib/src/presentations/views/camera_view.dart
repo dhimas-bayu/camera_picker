@@ -6,26 +6,30 @@ import 'package:camera_picker/src/core/models/data_video_camera.dart';
 import 'package:camera_picker/src/presentations/widgets/record_button.dart';
 import '../../core/models/data_stream_camera.dart';
 import '../../core/models/data_take_camera.dart';
-import '../viewmodels/camera_viewmodel.dart';
 import '../../../camera_picker.dart';
 import '../widgets/camera_switcher.dart';
 import '../widgets/capture_button.dart';
 import '../widgets/flash_mode_switcher.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:collection/collection.dart';
 
 import '../../core/utils/callback_wrapper.dart';
 
+typedef PreviewBuilder =
+    Widget Function(BuildContext context, Size previewSize);
+
 class CameraView extends StatefulWidget {
   CameraView({
     super.key,
-    this.action = CameraAction.takePicture,
+    this.mode = CameraMode.takePicture,
     required this.cameras,
     this.initCamera,
-    this.overlay,
+    this.initFlashMode,
     this.recordingDuration,
     this.targetStreamFPS = 10,
+    this.onPreviewBuilder,
+    this.onSwitchCamera,
+    this.onSwitchFlash,
     this.onTakePicture,
     this.onStreamCamera,
     this.onRecordVideo,
@@ -34,12 +38,15 @@ class CameraView extends StatefulWidget {
          "Cameras list cannot be empty.",
        );
 
-  final CameraAction action;
+  final CameraMode mode;
   final List<CameraDescription> cameras;
   final CameraDescription? initCamera;
-  final Widget? overlay;
+  final FlashMode? initFlashMode;
   final Duration? recordingDuration;
   final int targetStreamFPS;
+  final PreviewBuilder? onPreviewBuilder;
+  final ValueChanged<CameraDescription?>? onSwitchCamera;
+  final ValueChanged<FlashMode?>? onSwitchFlash;
   final ValueChanged<DataTakeCamera?>? onTakePicture;
   final ValueChanged<DataStreamCamera?>? onStreamCamera;
   final ValueChanged<DataVideoCamera?>? onRecordVideo;
@@ -50,13 +57,13 @@ class CameraView extends StatefulWidget {
 
 class _CameraViewState extends State<CameraView>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin {
-  final ValueNotifier<bool> _initNotifier = ValueNotifier(false);
-
   final ValueNotifier<double> _currentExposure = ValueNotifier(0.0);
 
   final ValueNotifier<Offset?> _focusOffset = ValueNotifier(null);
 
   final ValueNotifier<double> _currentScale = ValueNotifier(1.0);
+
+  final Map<CameraMode, List<FlashMode>> _validFlashMode = {};
 
   List<CameraDescription> _cameras = [];
 
@@ -78,9 +85,9 @@ class _CameraViewState extends State<CameraView>
 
   int _pointers = 0;
 
-  Size? _previewSize;
-
   CameraDescription? _description;
+
+  FlashMode? _flashMode;
 
   Duration _minProcessInterval = Duration.zero;
 
@@ -92,33 +99,53 @@ class _CameraViewState extends State<CameraView>
 
   DataVideoCamera _dataVideoCamera = const DataVideoCamera();
 
+  bool _disposed = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initCamera(description: widget.initCamera);
+    _flashMode = widget.initFlashMode;
+    _initCameras(description: widget.initCamera);
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
     debugPrint("CURRENT STATE : $state");
+    final CameraController? cameraController = _controller;
+    if (cameraController == null || !cameraController.value.isInitialized) {
+      return;
+    }
+
+    if (state == AppLifecycleState.resumed) {
+      _initCameras(
+        description: cameraController.description,
+      );
+    } else if (state == AppLifecycleState.inactive) {
+      _disposed = true;
+      cameraController.dispose();
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _currentExposure.dispose();
     _currentScale.dispose();
     _focusOffset.dispose();
-    _initNotifier.dispose();
     _controller?.dispose();
-    WidgetsBinding.instance.removeObserver(this);
+    _controller = null;
+    _disposed = true;
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_controller == null) return const SizedBox.shrink();
+    debugPrint("REBUILD CAMERA");
+    if (_controller == null) {
+      return const SizedBox.shrink();
+    }
+
     return SafeArea(
       top: true,
       bottom: true,
@@ -139,25 +166,18 @@ class _CameraViewState extends State<CameraView>
         _controller!,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final notifier = CameraViewModel.maybeOf(context);
-
-            final width = constraints.maxWidth;
-            final height = constraints.maxHeight;
-            _previewSize = Size(width, height);
-
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              notifier?.setPreviewSize(constraints.biggest);
-            });
-
             return Stack(
               children: [
-                ?widget.overlay,
                 GestureDetector(
                   onScaleStart: _handleScaleStart,
                   onScaleUpdate: _handleScaleUpdate,
                   onTapDown: (details) async {
                     return _onViewFinderTap(details, constraints);
                   },
+                ),
+                ?widget.onPreviewBuilder?.call(
+                  context,
+                  constraints.biggest,
                 ),
               ],
             );
@@ -170,10 +190,10 @@ class _CameraViewState extends State<CameraView>
   Widget _buildCameraNavigation() {
     return Align(
       alignment: Alignment.bottomCenter,
-      child: switch (widget.action) {
-        CameraAction.takePicture => _takePictureNavigation(),
-        CameraAction.scanBarcode => _scanBarcodeNavigation(),
-        CameraAction.videoRecord => _recordVideoNavigation(),
+      child: switch (widget.mode) {
+        CameraMode.takePicture => _takePictureNavigation(),
+        CameraMode.scanBarcode => _scanBarcodeNavigation(),
+        CameraMode.videoRecord => _recordVideoNavigation(),
       },
     );
   }
@@ -194,6 +214,7 @@ class _CameraViewState extends State<CameraView>
           ),
           FlashModeSwitcher(
             controller: _controller,
+            values: _validFlashMode[widget.mode],
             onSwitchFlash: _handleSwitchFlashMode,
           ),
         ],
@@ -205,15 +226,24 @@ class _CameraViewState extends State<CameraView>
     final duration = widget.recordingDuration ?? const Duration(seconds: 10);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 30.0, left: 16.0, right: 16.0),
+      padding: const EdgeInsets.only(bottom: 32.0, left: 16.0, right: 16.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
+          CameraSwitcher(
+            controller: _controller,
+            onSwitchCamera: _handleSwitchCamera,
+          ),
           RecordButton(
             recordDuration: duration,
             controller: _controller,
             onStartRecording: _handleStartRecording,
             onStopRecording: _handleStopRecording,
+          ),
+          FlashModeSwitcher(
+            controller: _controller,
+            values: _validFlashMode[widget.mode],
+            onSwitchFlash: _handleSwitchFlashMode,
           ),
         ],
       ),
@@ -232,6 +262,7 @@ class _CameraViewState extends State<CameraView>
         children: [
           FlashModeSwitcher(
             controller: _controller,
+            values: _validFlashMode[widget.mode],
             onSwitchFlash: _handleSwitchFlashMode,
           ),
         ],
@@ -239,15 +270,16 @@ class _CameraViewState extends State<CameraView>
     );
   }
 
-  Future<void> _initCamera({
+  Future<void> _initCameras({
     CameraDescription? description,
   }) async {
     _cameras = widget.cameras;
     _description = description ?? _cameras.first;
+    if (_validFlashMode.isEmpty) _availablesFlashMode();
 
-    ImageFormatGroup? imageFormatGroup = switch (widget.action) {
-      CameraAction.takePicture => ImageFormatGroup.jpeg,
-      _ => Platform.isIOS ? ImageFormatGroup.bgra8888 : ImageFormatGroup.yuv420,
+    ImageFormatGroup? imageFormatGroup = switch (widget.mode) {
+      CameraMode.takePicture => ImageFormatGroup.jpeg,
+      _ => Platform.isIOS ? ImageFormatGroup.bgra8888 : ImageFormatGroup.nv21,
     };
 
     final cameraController = CameraController(
@@ -256,10 +288,12 @@ class _CameraViewState extends State<CameraView>
       imageFormatGroup: imageFormatGroup,
       enableAudio: false,
     );
-
     _controller = cameraController;
     cameraController.addListener(() {
-      if (mounted) setState(() {});
+      if (mounted) {
+        _disposed = false;
+        setState(() {});
+      }
 
       if (cameraController.value.hasError) {
         debugPrint(
@@ -270,7 +304,9 @@ class _CameraViewState extends State<CameraView>
 
     try {
       await cameraController.initialize();
-      _initNotifier.value = cameraController.value.isInitialized;
+      if (cameraController.value.isInitialized) {
+        widget.onSwitchCamera?.call(_description);
+      }
 
       await Future.wait([
         cameraController.getMaxExposureOffset().then((value) {
@@ -285,19 +321,31 @@ class _CameraViewState extends State<CameraView>
         cameraController.getMaxZoomLevel().then((value) {
           _maxAvailableZoom = value;
         }),
-      ]);
+      ], eagerError: true);
 
-      if (mounted && widget.action == CameraAction.scanBarcode) {
+      if (widget.mode == CameraMode.scanBarcode) {
         _minProcessInterval = Duration(
           milliseconds: (1000 / widget.targetStreamFPS).round(),
         );
 
-        await cameraController.startImageStream((image) {
+        cameraController.startImageStream((image) {
           _streamImage(image, cameraController);
         });
       }
     } on CameraException catch (e) {
       debugPrint(e.toString());
+    }
+  }
+
+  void _availablesFlashMode() {
+    for (final mode in CameraMode.values) {
+      List<FlashMode> flashMode = switch (mode) {
+        CameraMode.takePicture => FlashMode.values,
+        CameraMode.scanBarcode => [FlashMode.off, FlashMode.torch],
+        CameraMode.videoRecord => [FlashMode.off, FlashMode.torch],
+      };
+
+      _validFlashMode.addAll({mode: flashMode});
     }
   }
 
@@ -331,13 +379,13 @@ class _CameraViewState extends State<CameraView>
   Future<void> _handleTakePicture() async {
     await callbackWrapper<void>(
       "TAKE PICTURE",
+      isDisposed: _disposed,
       controller: _controller,
       callback: (controller) async {
         if (controller.value.isTakingPicture) return;
 
         final imageFile = await controller.takePicture();
         _dataTakeCamera = _dataTakeCamera.copyWith(
-          lensDirection: controller.description.lensDirection,
           imageFile: File(imageFile.path),
         );
 
@@ -349,6 +397,7 @@ class _CameraViewState extends State<CameraView>
   Future<void> _handleStartRecording() async {
     await callbackWrapper<void>(
       "START RECORDING VIDEO",
+      isDisposed: _disposed,
       controller: _controller,
       callback: (controller) async {
         if (controller.value.isRecordingVideo) return;
@@ -360,6 +409,7 @@ class _CameraViewState extends State<CameraView>
   Future<void> _handleStopRecording() async {
     await callbackWrapper<void>(
       "STOP RECORDING VIDEO",
+      isDisposed: _disposed,
       controller: _controller,
       callback: (controller) async {
         if (!controller.value.isRecordingVideo) return;
@@ -384,6 +434,7 @@ class _CameraViewState extends State<CameraView>
 
     await callbackWrapper<void>(
       "SET ZOOM LEVEL",
+      isDisposed: _disposed,
       controller: _controller,
       callback: (controller) async {
         await controller.setZoomLevel(zoom);
@@ -404,6 +455,7 @@ class _CameraViewState extends State<CameraView>
   Future<void> _handleFocus(Offset offset) async {
     await callbackWrapper(
       "SET FOCUS POINT",
+      isDisposed: _disposed,
       controller: _controller,
       callback: (controller) async {
         _focusOffset.value = offset;
@@ -439,13 +491,14 @@ class _CameraViewState extends State<CameraView>
   Future<void> _handleSwitchCamera(CameraLensDirection? direction) async {
     await callbackWrapper(
       "SWITCH CAMERA",
+      isDisposed: _disposed,
       controller: _controller,
       callback: (controller) async {
         final description = _cameras.firstWhereOrNull(
           (d) => d.lensDirection == direction,
         );
 
-        await _initCamera(description: description);
+        await _initCameras(description: description);
       },
     );
   }
@@ -454,9 +507,12 @@ class _CameraViewState extends State<CameraView>
     if (flashMode == null) return;
     await callbackWrapper(
       "SWITCH FLASH MODE",
+      isDisposed: _disposed,
       controller: _controller,
       callback: (controller) async {
         await controller.setFlashMode(flashMode);
+        _flashMode = flashMode;
+        widget.onSwitchFlash?.call(_flashMode);
       },
     );
   }

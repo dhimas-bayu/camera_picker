@@ -18,9 +18,26 @@ class ImageFormatConverter {
   }) async {
     try {
       if (image.format.group == ImageFormatGroup.yuv420) {
-        return _convertYUV420ToInputImage(image);
+        return _convertYUV420ToInputImage(
+          image,
+          deviceOrientation: deviceOrientation,
+          lensDirection: lensDirection,
+          sensorOrientation: sensorOrientation,
+        );
+      } else if (image.format.group == ImageFormatGroup.nv21) {
+        return _convertNV21ToInputImage(
+          image,
+          deviceOrientation: deviceOrientation,
+          lensDirection: lensDirection,
+          sensorOrientation: sensorOrientation,
+        );
       } else if (image.format.group == ImageFormatGroup.bgra8888) {
-        return _convertBGRA8888ToInputImage(image);
+        return _convertBGRA8888ToInputImage(
+          image,
+          deviceOrientation: deviceOrientation,
+          lensDirection: lensDirection,
+          sensorOrientation: sensorOrientation,
+        );
       } else {
         developer.log('Unsupported image format: ${image.format.group}');
         return null;
@@ -29,6 +46,33 @@ class ImageFormatConverter {
       developer.log('Image conversion error: $e');
       return null;
     }
+  }
+
+  static Future<InputImage> _convertNV21ToInputImage(
+    CameraImage image, {
+    DeviceOrientation? deviceOrientation,
+    CameraLensDirection? lensDirection,
+    int? sensorOrientation,
+  }) async {
+    final planes = image.planes[0];
+    final bytes = planes.bytes;
+    final width = image.width.toDouble();
+    final height = image.height.toDouble();
+    final imageRotation = _getRotation(
+      lensDirection: lensDirection,
+      sensorOrientation: sensorOrientation,
+      deviceOrientation: deviceOrientation,
+    );
+
+    return InputImage.fromBytes(
+      bytes: bytes,
+      metadata: InputImageMetadata(
+        size: Size(width, height),
+        rotation: imageRotation ?? InputImageRotation.rotation0deg,
+        format: InputImageFormat.nv21,
+        bytesPerRow: planes.bytesPerRow,
+      ),
+    );
   }
 
   static Future<InputImage> _convertYUV420ToInputImage(
@@ -50,7 +94,7 @@ class ImageFormatConverter {
       bytes: bytes,
       metadata: InputImageMetadata(
         size: Size(width, height),
-        rotation: imageRotation,
+        rotation: imageRotation ?? InputImageRotation.rotation0deg,
         format: InputImageFormat.nv21,
         bytesPerRow: image.planes[0].bytesPerRow,
       ),
@@ -76,7 +120,7 @@ class ImageFormatConverter {
       bytes: bytes,
       metadata: InputImageMetadata(
         size: Size(width, height),
-        rotation: imageRotation,
+        rotation: imageRotation ?? InputImageRotation.rotation0deg,
         format: InputImageFormat.bgra8888,
         bytesPerRow: image.planes[0].bytesPerRow,
       ),
@@ -87,10 +131,10 @@ class ImageFormatConverter {
     CameraImage image, {
     bool useIsolate = true,
   }) async {
-    if (useIsolate) {
-      return await Isolate.run(() => _convertImageToBytes(image));
-    }
-    return _convertImageToBytes(image);
+    if (!useIsolate) return _convertImageToBytes(image);
+    return Isolate.run(() async {
+      return await _convertImageToBytes(image);
+    });
   }
 
   static Future<ui.Image> convertBytesToUiImage(
@@ -99,31 +143,36 @@ class ImageFormatConverter {
     int height, {
     bool useIsolate = true,
   }) async {
-    if (useIsolate) {
-      return await Isolate.run(
-        () => _convertRGB888ToUiImage(image, width, height),
+    if (!useIsolate) {
+      return _convertRGB888ToUiImage(
+        image,
+        width,
+        height,
       );
     }
-    return _convertRGB888ToUiImage(image, width, height);
+
+    return Isolate.run(
+      () async => await _convertRGB888ToUiImage(
+        image,
+        width,
+        height,
+      ),
+    );
   }
 
   static Future<Uint8List> _convertImageToBytes(CameraImage image) async {
-    return await Isolate.run(
-      () async {
-        switch (image.format.group) {
-          case ImageFormatGroup.yuv420:
-            return _convertYUV420ToRGB888(image);
-          case ImageFormatGroup.nv21:
-            return _convertNV21ToRGB888(image);
-          case ImageFormatGroup.bgra8888:
-            return _convertBGRA8888ToRGB888(image);
-          case ImageFormatGroup.jpeg:
-            return _convertJPEGToRGB888(image);
-          default:
-            throw Exception('Unsupported image format: ${image.format}');
-        }
-      },
-    );
+    switch (image.format.group) {
+      case ImageFormatGroup.yuv420:
+        return _convertYUV420ToRGB888(image);
+      case ImageFormatGroup.nv21:
+        return _convertNV21ToRGB888(image);
+      case ImageFormatGroup.bgra8888:
+        return _convertBGRA8888ToRGB888(image);
+      case ImageFormatGroup.jpeg:
+        return _convertJPEGToRGB888(image);
+      default:
+        throw Exception('Unsupported image format: ${image.format}');
+    }
   }
 
   static Future<Uint8List> cropImageBytes(
@@ -131,23 +180,25 @@ class ImageFormatConverter {
     ui.Rect cropRect, {
     bool useIsolate = true,
   }) async {
-    if (useIsolate) {
-      return await Isolate.run(
-        () => _cropImageBytes(
-          image,
-          cropRect.left.toInt(),
-          cropRect.top.toInt(),
-          cropRect.width.toInt(),
-          cropRect.height.toInt(),
-        ),
+    if (!useIsolate) {
+      return _cropImageBytes(
+        image,
+        cropRect.left.round(),
+        cropRect.top.round(),
+        cropRect.width.round(),
+        cropRect.height.round(),
       );
     }
-    return _cropImageBytes(
-      image,
-      cropRect.left.round(),
-      cropRect.top.round(),
-      cropRect.width.round(),
-      cropRect.height.round(),
+    return Isolate.run(
+      () async {
+        return await _cropImageBytes(
+          image,
+          cropRect.left.round(),
+          cropRect.top.round(),
+          cropRect.width.round(),
+          cropRect.height.round(),
+        );
+      },
     );
   }
 
@@ -527,7 +578,7 @@ class ImageFormatConverter {
     return croppedBytes;
   }
 
-  static InputImageRotation _getRotation({
+  static InputImageRotation? _getRotation({
     DeviceOrientation? deviceOrientation,
     CameraLensDirection? lensDirection,
     int? sensorOrientation,
@@ -541,7 +592,10 @@ class ImageFormatConverter {
     };
 
     InputImageRotation? rotation;
-    if (sensorOrientation == null) return InputImageRotation.rotation0deg;
+    if (sensorOrientation == null) {
+      return rotation;
+    }
+
     if (Platform.isIOS) {
       rotation = InputImageRotationValue.fromRawValue(sensorOrientation);
     } else if (Platform.isAndroid) {
@@ -558,6 +612,6 @@ class ImageFormatConverter {
       }
     }
 
-    return rotation ?? InputImageRotation.rotation0deg;
+    return rotation;
   }
 }
