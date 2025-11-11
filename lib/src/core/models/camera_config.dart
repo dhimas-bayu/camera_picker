@@ -30,11 +30,13 @@ class CameraScannerConfig extends Config {
   final int targetFps;
   final bool autoTracking;
   final List<BarcodeFormat> barcodeFormat;
+  final RegExp? filterText;
 
   const CameraScannerConfig({
     this.targetFps = 10,
     this.barcodeFormat = const [BarcodeFormat.qrCode],
     this.autoTracking = true,
+    this.filterText,
   });
 }
 

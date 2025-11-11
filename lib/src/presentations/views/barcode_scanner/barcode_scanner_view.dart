@@ -129,35 +129,29 @@ class _BarcodeScannerViewState extends State<BarcodeScannerView>
     if (_isProcessing) return;
     _isProcessing = true;
     try {
-      if (data == null || data.image == null) return;
-      final inputImage = await ImageFormatConverter.convertToInputImage(
-        data.image!,
-        lensDirection: data.lensDirection,
-        deviceOrientation: data.deviceOrientation,
-        sensorOrientation: data.sensorOrientation,
-      );
-
+      final inputImage = await _convertCameraData(data);
       if (inputImage == null) return;
+
+      final config = widget.config;
+      final regex = config.filterText;
       final barcodes = await _barcodeScanner.processImage(inputImage);
-      final metadata = inputImage.metadata;
       final barcode = barcodes.firstOrNull;
+      final metadata = inputImage.metadata;
 
       if (barcode == null) return;
-      if (!widget.config.autoTracking &&
-          barcode.displayValue == _barcodeValue) {
-        return;
-      }
+      if (!_isValidBarcode(barcode, regex)) return;
+      if (!_shouldTrackBarcode(config, barcode.displayValue)) return;
 
       _boundingBox = _barcodeBoundingBox(
         barcode,
         metadata?.size,
         metadata?.rotation,
-        data.lensDirection,
+        data?.lensDirection,
         _layoutSize,
       );
 
       if (_boundingBox == null || _initialRect == null) return;
-      if (widget.config.autoTracking) {
+      if (config.autoTracking) {
         _barcodeValue = barcode.displayValue;
         _controller.forward();
       } else {
@@ -172,6 +166,28 @@ class _BarcodeScannerViewState extends State<BarcodeScannerView>
     } finally {
       _isProcessing = false;
     }
+  }
+
+  Future<InputImage?> _convertCameraData(DataStreamCamera? data) async {
+    if (data == null || data.image == null) return null;
+    return await ImageFormatConverter.convertToInputImage(
+      data.image!,
+      lensDirection: data.lensDirection,
+      deviceOrientation: data.deviceOrientation,
+      sensorOrientation: data.sensorOrientation,
+    );
+  }
+
+  bool _isValidBarcode(Barcode barcode, RegExp? regex) {
+    if (regex == null) return true;
+    return regex.hasMatch("${barcode.displayValue}");
+  }
+
+  bool _shouldTrackBarcode(CameraScannerConfig config, String? value) {
+    if (!config.autoTracking && value == _barcodeValue) {
+      return false;
+    }
+    return true;
   }
 
   Rect? _barcodeBoundingBox(
