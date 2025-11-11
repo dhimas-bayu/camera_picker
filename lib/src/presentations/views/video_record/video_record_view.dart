@@ -16,7 +16,7 @@ class VideoRecordView extends StatefulWidget {
   });
 
   final List<CameraDescription> cameras;
-  final VideoConfig config;
+  final CameraVideoConfig config;
   final ValueChanged<File?>? onRecorded;
 
   @override

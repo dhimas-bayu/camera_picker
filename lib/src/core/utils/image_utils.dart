@@ -435,6 +435,25 @@ class ImageUtils {
     }
   }
 
+  static Future<File?> compressImageToFile({
+    required Uint8List imageBytes,
+    int quality = 80,
+    bool flippedHorizontal = false,
+    bool useIsolate = false,
+  }) async {
+    File? resultFile;
+    final image = await _convertToImage(imageBytes);
+    if (image == null) return resultFile;
+    if (flippedHorizontal) {
+      final flippedImage = img.flipHorizontal(image);
+      resultFile = await imageToFile(flippedImage, quality: quality);
+    } else {
+      resultFile = await imageToFile(image, quality: quality);
+    }
+
+    return resultFile;
+  }
+
   static Future<File?> cropImageFromFile({
     required Uint8List imageBytes,
     required Rect screenRect,

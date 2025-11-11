@@ -20,7 +20,7 @@ class BarcodeScannerView extends StatefulWidget {
   });
 
   final List<CameraDescription> cameras;
-  final StreamCameraConfig config;
+  final CameraScannerConfig config;
   final ValueChanged<String?>? onBarcodeScanned;
 
   @override
@@ -29,7 +29,7 @@ class BarcodeScannerView extends StatefulWidget {
 
 class _BarcodeScannerViewState extends State<BarcodeScannerView>
     with SingleTickerProviderStateMixin {
-  final _barcodeScanner = BarcodeScanner();
+  late BarcodeScanner _barcodeScanner;
   late AnimationController _controller;
   late Animation<double> _animation;
   String? _barcodeValue;
@@ -41,7 +41,7 @@ class _BarcodeScannerViewState extends State<BarcodeScannerView>
   @override
   void initState() {
     super.initState();
-
+    _barcodeScanner = BarcodeScanner(formats: [BarcodeFormat.all]);
     _controller = AnimationController(
       vsync: this,
       duration: Durations.medium2,
@@ -69,6 +69,7 @@ class _BarcodeScannerViewState extends State<BarcodeScannerView>
       _controller.reset();
 
       if (_barcodeValue != null) {
+        _initialRect = _boundingBox;
         widget.onBarcodeScanned?.call(_barcodeValue);
       }
     }

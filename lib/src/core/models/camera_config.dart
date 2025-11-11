@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
 
 import 'overlay_size.dart';
 
@@ -14,35 +15,33 @@ class Config {
   });
 }
 
-class CameraConfig extends Config {
+class CameraPickerConfig extends Config {
   final bool autoCropping;
 
-  const CameraConfig({
-    super.quality = 80,
-    super.showOverlay = true,
+  const CameraPickerConfig({
+    super.quality,
+    super.showOverlay,
     super.overlaySize,
-    this.autoCropping = true,
+    this.autoCropping = false,
   });
 }
 
-class StreamCameraConfig extends Config {
-  final bool autoTracking;
+class CameraScannerConfig extends Config {
   final int targetFps;
-  final bool enableLogging;
+  final bool autoTracking;
+  final List<BarcodeFormat> barcodeFormat;
 
-  const StreamCameraConfig({
-    super.showOverlay = true,
-    this.autoTracking = true,
+  const CameraScannerConfig({
     this.targetFps = 10,
-    this.enableLogging = kDebugMode,
+    this.barcodeFormat = const [BarcodeFormat.qrCode],
+    this.autoTracking = true,
   });
 }
 
-class VideoConfig extends Config {
+class CameraVideoConfig extends Config {
   final int duration;
 
-  const VideoConfig({
-    super.quality = 80,
+  const CameraVideoConfig({
     this.duration = 10000,
   });
 }

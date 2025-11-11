@@ -17,7 +17,7 @@ class ImageCaptureView extends StatefulWidget {
   });
 
   final List<CameraDescription> cameras;
-  final CameraConfig config;
+  final CameraPickerConfig config;
   final ValueChanged<File?>? onTakePicture;
 
   @override
@@ -71,21 +71,42 @@ class _ImageCaptureViewState extends State<ImageCaptureView> {
           },
           onTakePicture: (dataCamera) async {
             File? resultFile = dataCamera?.imageFile;
-            if (resultFile != null &&
-                widget.config.autoCropping &&
+            if (resultFile == null) return;
+
+            final isFront =
+                (_camera?.lensDirection == CameraLensDirection.front);
+
+            final config = widget.config;
+            final imageBytes = await resultFile.readAsBytes();
+            final shouldCrop =
+                config.autoCropping &&
                 _boundingBox != null &&
-                _layoutSize != null) {
-              final imageBytes = await resultFile.readAsBytes();
-              resultFile = await ImageUtils.cropImageFromFile(
-                imageBytes: imageBytes,
-                screenRect: _boundingBox!,
-                displaySize: _layoutSize!,
-                quality: widget.config.quality,
-                flippedHorizontal:
-                    _camera?.lensDirection == CameraLensDirection.front,
-              );
+                _layoutSize != null;
+            final shouldCompress = config.quality < 100;
+
+            if (!shouldCrop && !shouldCompress) {
+              _imageFile.value = isFront
+                  ? await ImageUtils.flipHorizontal(imageBytes)
+                  : resultFile;
+              return;
             }
-            _imageFile.value = resultFile;
+
+            if (!shouldCrop) {
+              _imageFile.value = await ImageUtils.compressImageToFile(
+                imageBytes: imageBytes,
+                quality: config.quality,
+                flippedHorizontal: isFront,
+              );
+              return;
+            }
+
+            _imageFile.value = await ImageUtils.cropImageFromFile(
+              imageBytes: imageBytes,
+              screenRect: _boundingBox!,
+              displaySize: _layoutSize!,
+              quality: config.quality,
+              flippedHorizontal: isFront,
+            );
           },
         );
       },

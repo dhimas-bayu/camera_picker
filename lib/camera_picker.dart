@@ -9,6 +9,9 @@ import 'src/presentations/views/barcode_scanner/barcode_scanner_view.dart';
 import 'src/presentations/views/image_capture/image_capture_view.dart';
 import 'src/presentations/views/video_record/video_record_view.dart';
 
+export 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart'
+    show BarcodeFormat;
+
 export 'src/presentations/painters/camera_overlay_painter.dart';
 export 'src/core/models/camera_config.dart';
 export 'src/core/models/overlay_size.dart';
@@ -25,13 +28,13 @@ class CameraPicker extends StatefulWidget {
 
   static Future<File?> takePicture(
     BuildContext context, {
-    CameraConfig? config,
+    CameraPickerConfig? config,
   }) async {
     return await Navigator.of(context, rootNavigator: true).push<File?>(
       MaterialPageRoute(
         builder: (context) => CameraPicker._(
           action: CameraMode.takePicture,
-          config: config ?? const CameraConfig(),
+          config: config ?? const CameraPickerConfig(),
         ),
       ),
     );
@@ -39,13 +42,13 @@ class CameraPicker extends StatefulWidget {
 
   static Future<String?> scanBarcode(
     BuildContext context, {
-    StreamCameraConfig? config,
+    CameraScannerConfig? config,
   }) async {
     return await Navigator.of(context, rootNavigator: true).push<String?>(
       MaterialPageRoute(
         builder: (context) => CameraPicker._(
           action: CameraMode.scanBarcode,
-          config: config ?? const StreamCameraConfig(),
+          config: config ?? const CameraScannerConfig(),
         ),
       ),
     );
@@ -53,13 +56,13 @@ class CameraPicker extends StatefulWidget {
 
   static Future<File?> videoRecord(
     BuildContext context, {
-    VideoConfig? config,
+    CameraVideoConfig? config,
   }) async {
     return await Navigator.of(context, rootNavigator: true).push<File?>(
       MaterialPageRoute(
         builder: (context) => CameraPicker._(
           action: CameraMode.videoRecord,
-          config: config ?? const VideoConfig(),
+          config: config ?? const CameraVideoConfig(),
         ),
       ),
     );
@@ -99,7 +102,7 @@ class _CameraPickerState extends State<CameraPicker> {
             case CameraMode.takePicture:
               return ImageCaptureView(
                 cameras: asyncSnapshot.requireData,
-                config: widget.config as CameraConfig,
+                config: widget.config as CameraPickerConfig,
                 onTakePicture: (file) {
                   Navigator.pop(context, file);
                 },
@@ -107,7 +110,7 @@ class _CameraPickerState extends State<CameraPicker> {
             case CameraMode.scanBarcode:
               return BarcodeScannerView(
                 cameras: asyncSnapshot.requireData,
-                config: widget.config as StreamCameraConfig,
+                config: widget.config as CameraScannerConfig,
                 onBarcodeScanned: (value) {
                   Navigator.pop(context, value);
                 },
@@ -115,7 +118,7 @@ class _CameraPickerState extends State<CameraPicker> {
             case CameraMode.videoRecord:
               return VideoRecordView(
                 cameras: asyncSnapshot.requireData,
-                config: widget.config as VideoConfig,
+                config: widget.config as CameraVideoConfig,
                 onRecorded: (file) {
                   Navigator.pop(context, file);
                 },
