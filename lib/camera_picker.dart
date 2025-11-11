@@ -11,6 +11,7 @@ import 'src/presentations/views/video_record/video_record_view.dart';
 
 export 'src/presentations/painters/camera_overlay_painter.dart';
 export 'src/core/models/camera_config.dart';
+export 'src/core/models/overlay_size.dart';
 
 enum CameraMode { takePicture, scanBarcode, videoRecord }
 

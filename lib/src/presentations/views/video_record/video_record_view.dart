@@ -5,7 +5,6 @@ import 'package:camera_picker/src/presentations/views/video_record/video_preview
 import 'package:flutter/material.dart';
 
 import '../../../../camera_picker.dart';
-import '../../../core/models/camera_config.dart';
 import '../camera_view.dart';
 
 class VideoRecordView extends StatefulWidget {

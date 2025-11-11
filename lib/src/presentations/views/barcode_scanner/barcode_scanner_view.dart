@@ -7,7 +7,6 @@ import 'package:camera_picker/src/presentations/views/camera_view.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
 
-import '../../../core/models/camera_config.dart';
 import '../../../core/models/data_stream_camera.dart';
 import '../../../core/utils/coordinates_translation.dart';
 import '../../../core/utils/image_format_converter.dart';

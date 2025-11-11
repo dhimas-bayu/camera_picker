@@ -1,12 +1,10 @@
 import 'dart:io';
 
 import 'package:camera/camera.dart';
-import 'package:camera_picker/src/core/utils/overlay_size_utils.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../../../camera_picker.dart';
 import '../../../core/utils/image_utils.dart';
-import '../../../core/models/camera_config.dart';
 import '../camera_view.dart';
 import 'image_file_preview.dart';
 
@@ -17,6 +15,7 @@ class ImageCaptureView extends StatefulWidget {
     required this.config,
     this.onTakePicture,
   });
+
   final List<CameraDescription> cameras;
   final CameraConfig config;
   final ValueChanged<File?>? onTakePicture;
@@ -94,11 +93,15 @@ class _ImageCaptureViewState extends State<ImageCaptureView> {
   }
 
   Widget _buildOverlay(BuildContext context, Size size) {
+    final showOverlay = widget.config.showOverlay;
+    if (!showOverlay) {
+      return const SizedBox.shrink();
+    }
+
     _layoutSize = size;
     final center = Offset(size.width / 2, size.height / 2);
-    final docSize = OverlaySizeUtils.getSize(
-      widget.config.overlayType ?? OverlayType.ktp,
-    );
+    final docSize = widget.config.overlaySize ?? OverlaySize.idCard();
+
     final overlaySize = docSize.toOverlaySize(size, scaleFactor: .8);
     _boundingBox = Rect.fromCenter(
       center: center,

@@ -1,15 +1,16 @@
-import '../utils/overlay_size_utils.dart';
 import 'package:flutter/foundation.dart';
+
+import 'overlay_size.dart';
 
 @immutable
 class Config {
   final int quality;
   final bool showOverlay;
-  final OverlayType? overlayType;
+  final OverlaySize? overlaySize;
   const Config({
     this.quality = 100,
     this.showOverlay = true,
-    this.overlayType,
+    this.overlaySize,
   });
 }
 
@@ -19,7 +20,7 @@ class CameraConfig extends Config {
   const CameraConfig({
     super.quality = 80,
     super.showOverlay = true,
-    super.overlayType,
+    super.overlaySize,
     this.autoCropping = true,
   });
 }
