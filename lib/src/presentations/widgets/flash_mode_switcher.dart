@@ -42,7 +42,7 @@ class FlashModeSwitcher extends StatelessWidget {
             child: Icon(icon, size: 24, color: color),
           ),
           style: IconButton.styleFrom(
-            backgroundColor: Colors.white24,
+            backgroundColor: Colors.white38,
             foregroundColor: Colors.white,
             side: BorderSide(color: color),
             fixedSize: const Size.square(48.0),

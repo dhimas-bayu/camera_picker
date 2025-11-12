@@ -37,6 +37,7 @@ class _BarcodeScannerViewState extends State<BarcodeScannerView>
   Rect? _initialRect;
   Rect? _boundingBox;
   bool _isProcessing = false;
+  bool _isAnimating = false;
 
   @override
   void initState() {
@@ -53,7 +54,7 @@ class _BarcodeScannerViewState extends State<BarcodeScannerView>
     );
 
     _controller
-      ..addStatusListener(_animationListener)
+      ..addListener(_animationListener)
       ..forward();
   }
 
@@ -64,8 +65,9 @@ class _BarcodeScannerViewState extends State<BarcodeScannerView>
     super.dispose();
   }
 
-  void _animationListener(AnimationStatus status) {
-    if (status == AnimationStatus.completed) {
+  void _animationListener() {
+    _isAnimating = _controller.isAnimating;
+    if (_controller.status == AnimationStatus.completed) {
       _controller.reset();
 
       if (_barcodeValue != null) {
@@ -126,7 +128,7 @@ class _BarcodeScannerViewState extends State<BarcodeScannerView>
   }
 
   Future<void> _processImage(DataStreamCamera? data) async {
-    if (_isProcessing) return;
+    if (_isProcessing || _isAnimating) return;
     _isProcessing = true;
     try {
       final inputImage = await _convertCameraData(data);

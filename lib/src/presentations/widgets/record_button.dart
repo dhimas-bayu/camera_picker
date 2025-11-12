@@ -75,7 +75,6 @@ class _RecordButtonState extends State<RecordButton>
             height: 72.0,
             decoration: const ShapeDecoration(
               shape: CircleBorder(),
-              color: Colors.white24,
             ),
             child: Stack(
               fit: StackFit.expand,
@@ -90,17 +89,17 @@ class _RecordButtonState extends State<RecordButton>
                   ),
                 ),
                 AnimatedContainer(
-                  duration: Durations.short2,
-                  width: isRecording ? 28.0 : 48.0,
-                  height: isRecording ? 28.0 : 48.0,
+                  duration: Durations.short4,
+                  width: isRecording ? 24.0 : 48.0,
+                  height: isRecording ? 24.0 : 48.0,
                   margin: isRecording
-                      ? const EdgeInsets.all(16.0)
-                      : const EdgeInsets.all(8.0),
+                      ? const EdgeInsets.all(20.0)
+                      : const EdgeInsets.all(4.0),
                   decoration: ShapeDecoration(
                     color: isRecording ? Colors.red : Colors.white,
                     shape: isRecording
                         ? RoundedRectangleBorder(
-                            borderRadius: BorderRadiusGeometry.circular(12.0),
+                            borderRadius: BorderRadiusGeometry.circular(8.0),
                           )
                         : const CircleBorder(),
                   ),

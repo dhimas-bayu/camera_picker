@@ -10,30 +10,41 @@ class CaptureButton extends StatelessWidget {
   Widget build(BuildContext context) {
     if (controller == null) return const SizedBox.shrink();
 
-    return IconButton(
-      icon: ValueListenableBuilder<CameraValue>(
+    return GestureDetector(
+      onTap: onTakePicture,
+      child: ValueListenableBuilder(
         valueListenable: controller!,
         builder: (context, value, child) {
           final isTakingPicture = value.isTakingPicture;
-          return AnimatedContainer(
-            duration: Durations.short4,
-            margin: isTakingPicture
-                ? const EdgeInsets.all(4.0)
-                : EdgeInsets.zero,
+          return Container(
+            width: 72.0,
+            height: 72.0,
             decoration: const ShapeDecoration(
-              color: Colors.white,
-              shape: CircleBorder(),
+              shape: CircleBorder(
+                side: BorderSide(width: 4.0, color: Colors.white),
+              ),
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              alignment: Alignment.center,
+              children: [
+                AnimatedContainer(
+                  duration: Durations.short4,
+                  width: 48.0,
+                  height: 48.0,
+                  margin: isTakingPicture
+                      ? const EdgeInsets.all(8.0)
+                      : const EdgeInsets.all(2.0),
+                  decoration: const ShapeDecoration(
+                    color: Colors.white,
+                    shape: CircleBorder(),
+                  ),
+                ),
+              ],
             ),
           );
         },
       ),
-      style: IconButton.styleFrom(
-        backgroundColor: Colors.white24,
-        foregroundColor: Colors.white,
-        side: const BorderSide(color: Colors.white),
-        fixedSize: const Size.square(72.0),
-      ),
-      onPressed: onTakePicture,
     );
   }
 }

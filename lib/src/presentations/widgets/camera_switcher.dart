@@ -27,7 +27,7 @@ class CameraSwitcher extends StatelessWidget {
             child: Icon(Icons.cached_rounded, color: color),
           ),
           style: IconButton.styleFrom(
-            backgroundColor: Colors.white24,
+            backgroundColor: Colors.white38,
             foregroundColor: Colors.white,
             side: BorderSide(color: color),
             fixedSize: const Size.square(48.0),
