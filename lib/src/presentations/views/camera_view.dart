@@ -4,16 +4,16 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:camera_picker/src/core/models/data_video_camera.dart';
 import 'package:camera_picker/src/presentations/widgets/record_button.dart';
+import 'package:collection/collection.dart';
+import 'package:flutter/material.dart';
+
+import '../../../camera_picker.dart';
 import '../../core/models/data_stream_camera.dart';
 import '../../core/models/data_take_camera.dart';
-import '../../../camera_picker.dart';
+import '../../core/utils/callback_wrapper.dart';
 import '../widgets/camera_switcher.dart';
 import '../widgets/capture_button.dart';
 import '../widgets/flash_mode_switcher.dart';
-import 'package:flutter/material.dart';
-import 'package:collection/collection.dart';
-
-import '../../core/utils/callback_wrapper.dart';
 
 typedef PreviewBuilder =
     Widget Function(BuildContext context, Size previewSize);
@@ -23,6 +23,7 @@ class CameraView extends StatefulWidget {
     super.key,
     this.mode = CameraMode.takePicture,
     required this.cameras,
+    this.resolutionPreset,
     this.initCamera,
     this.initFlashMode,
     this.recordingDuration,
@@ -41,6 +42,7 @@ class CameraView extends StatefulWidget {
   final CameraMode mode;
   final List<CameraDescription> cameras;
   final CameraDescription? initCamera;
+  final ResolutionPreset? resolutionPreset;
   final FlashMode? initFlashMode;
   final Duration? recordingDuration;
   final int targetStreamFPS;
@@ -284,7 +286,7 @@ class _CameraViewState extends State<CameraView>
 
     final cameraController = CameraController(
       _description!,
-      ResolutionPreset.high,
+      widget.resolutionPreset ?? ResolutionPreset.high,
       imageFormatGroup: imageFormatGroup,
       enableAudio: false,
     );

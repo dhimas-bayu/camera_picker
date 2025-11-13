@@ -104,7 +104,7 @@ class BarcodeScannerPage extends StatelessWidget {
                       barcodeValue = await CameraPicker.scanBarcode(
                         context,
                         config: CameraScannerConfig(
-                          autoTracking: false,
+                          autoTracking: true,
                           filterText: RegExp(
                             r'\b(no_ttss|kdtk|kdcab)\b',
                             caseSensitive: false,

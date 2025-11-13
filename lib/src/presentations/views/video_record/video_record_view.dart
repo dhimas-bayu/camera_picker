@@ -57,6 +57,7 @@ class _VideoRecordViewState extends State<VideoRecordView> {
         return CameraView(
           mode: CameraMode.videoRecord,
           cameras: widget.cameras,
+          resolutionPreset: widget.config.resolutionPreset,
           initCamera: _camera,
           initFlashMode: _flashMode ?? FlashMode.off,
           onSwitchCamera: (value) {

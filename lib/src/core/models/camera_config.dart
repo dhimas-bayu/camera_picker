@@ -1,3 +1,4 @@
+import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
 
@@ -8,10 +9,13 @@ class Config {
   final int quality;
   final bool showOverlay;
   final OverlaySize? overlaySize;
+  final ResolutionPreset resolutionPreset;
+
   const Config({
     this.quality = 100,
     this.showOverlay = true,
     this.overlaySize,
+    this.resolutionPreset = ResolutionPreset.high,
   });
 }
 
@@ -45,5 +49,6 @@ class CameraVideoConfig extends Config {
 
   const CameraVideoConfig({
     this.duration = 10000,
+    super.resolutionPreset,
   });
 }
