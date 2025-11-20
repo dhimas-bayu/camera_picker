@@ -9,6 +9,7 @@ import 'src/presentations/views/barcode_scanner/barcode_scanner_view.dart';
 import 'src/presentations/views/image_capture/image_capture_view.dart';
 import 'src/presentations/views/video_record/video_record_view.dart';
 
+export 'package:camera/camera.dart' show ResolutionPreset;
 export 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart'
     show BarcodeFormat;
 

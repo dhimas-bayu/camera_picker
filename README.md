@@ -1,17 +1,18 @@
 # camera_picker
 
-A comprehensive Flutter camera picker package that provides easy-to-use camera functionality for taking pictures and scanning barcodes/QR codes. The package includes document overlay support, automatic cropping, and barcode scanning capabilities using Google ML Kit.
+A comprehensive Flutter camera picker package that provides easy-to-use camera functionality for taking pictures, recording short videos, and scanning barcodes/QR codes. The package includes document overlay support, automatic cropping, and barcode scanning capabilities using Google ML Kit.
 
 ## Features
 
 - 📸 **Take Pictures**: Capture high-quality images with customizable settings
+- 🎬 **Short Video Recording**: Record short video clips with camera
 - 📱 **Barcode/QR Code Scanning**: Real-time barcode and QR code detection using Google ML Kit
 - 📄 **Document Overlay Support**: Pre-configured overlay templates for various document types (ID cards, passports, photos, etc.)
 - 🎯 **Auto Cropping**: Automatic image cropping based on overlay boundaries
 - 🔄 **Camera Switching**: Switch between front and back cameras
 - 💡 **Flash Control**: Toggle flash mode for better image quality
 - 🔍 **Focus & Zoom**: Tap to focus and pinch to zoom functionality
-- ⚙️ **Customizable Configuration**: Extensive configuration options for both image capture and barcode scanning
+- ⚙️ **Customizable Configuration**: Extensive configuration options for image capture, video recording, and barcode scanning
 
 ## Installation
 
@@ -19,7 +20,10 @@ Add `camera_picker` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  camera_picker: ^0.0.1
+  camera_picker:
+    git:
+      url: https://github.com/dhimas-bayu/camera_picker.git
+      ref: main
 ```
 
 Then run:
@@ -46,7 +50,7 @@ Add the following to `ios/Runner/Info.plist`:
 
 ```xml
 <key>NSCameraUsageDescription</key>
-<string>This app needs access to camera to take photos and scan barcodes</string>
+<string>This app needs access to camera to take photos, record videos, and scan barcodes</string>
 ```
 
 ## Usage
@@ -65,7 +69,22 @@ final imageFile = await CameraPicker.takePicture(context);
 
 if (imageFile != null) {
   // Use the captured image file
-  print('Image saved at: ${imageFile.path}');
+  print('Image saved at: \\${imageFile.path}');
+}
+```
+
+#### Recording a Short Video
+
+```dart
+// Record a short video (with optional max duration)
+final videoFile = await CameraPicker.recordVideo(
+  context,
+  maxDuration: Duration(seconds: 15), // Max duration (optional)
+);
+
+if (videoFile != null) {
+  // Use the recorded video file
+  print('Video saved at: \\${videoFile.path}');
 }
 ```
 
@@ -77,7 +96,7 @@ final barcodeResult = await CameraPicker.scanBarcode(context);
 
 if (barcodeResult != null) {
   // Use the scanned barcode value
-  print('Barcode value: $barcodeResult');
+  print('Barcode value: \\${barcodeResult}');
 }
 ```
 
@@ -90,7 +109,7 @@ if (barcodeResult != null) {
 final config = CameraConfig(
   quality: 90,              // Image quality (0-100)
   showOverlay: true,        // Show document overlay
-  overlayType: OverlayType.ktp,  // Overlay type (e.g., KTP, passport, etc.)
+  overlaySize: OverlaySize.paperA4(),  // Overlay size (e.g., KTP, passport, etc.)
   autoCropping: true,       // Enable automatic cropping
 );
 
@@ -108,12 +127,27 @@ final config = StreamCameraConfig(
   targetFps: 15,              // Target frames per second for processing
   showOverlay: true,          // Show scanning overlay
   autoTracking: true,         // Enable auto-tracking
-  enableLogging: true,         // Enable debug logging
+  enableLogging: true,        // Enable debug logging
 );
 
 final barcodeResult = await CameraPicker.scanBarcode(
   context,
   config: config,
+);
+```
+
+#### Custom Configuration for Video Recording
+
+```dart
+// Configure video recording with custom settings and max duration
+final videoConfig = CameraVideoConfig(
+  duration: 10000,                          // in milliseconds
+  resolutionPreset: ResolutionPreset.high,  // default high resolution
+);
+
+final videoFile = await CameraPicker.videoRecord(
+  context,
+  config: videoConfig,
 );
 ```
 
@@ -140,15 +174,25 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   File? _capturedImage;
+  File? _capturedVideo;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Camera Picker Example')),
       body: Center(
-        child: _capturedImage != null
-            ? Image.file(_capturedImage!)
-            : Text('No image captured'),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _capturedImage != null
+              ? Image.file(_capturedImage!)
+              : Text('No image captured'),
+            SizedBox(height: 20),
+            _capturedVideo != null
+              ? Text('Video captured: \\${_capturedVideo!.path}')
+              : Text('No video captured'),
+          ],
+        ),
       ),
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
@@ -168,10 +212,26 @@ class _HomePageState extends State<HomePage> {
           SizedBox(height: 16),
           FloatingActionButton(
             onPressed: () async {
+              final videoFile = await CameraPicker.recordVideo(
+                context,
+                maxDuration: Duration(seconds: 15),
+              );
+              if (videoFile != null) {
+                setState(() {
+                  _capturedVideo = videoFile;
+                });
+              }
+            },
+            child: Icon(Icons.videocam),
+            tooltip: 'Record Video',
+          ),
+          SizedBox(height: 16),
+          FloatingActionButton(
+            onPressed: () async {
               final barcode = await CameraPicker.scanBarcode(context);
               if (barcode != null) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Scanned: $barcode')),
+                  SnackBar(content: Text('Scanned: \\${barcode}')),
                 );
               }
             },
@@ -194,7 +254,6 @@ Main class for camera operations.
 #### Methods
 
 ##### `takePicture`
-
 Opens the camera picker for taking a picture.
 
 ```dart
@@ -203,21 +262,34 @@ static Future<File?> takePicture(
   CameraConfig? config,
 })
 ```
-
-**Parameters:**
 - `context`: Build context for navigation
 - `config`: Optional [CameraConfig] for customizing capture settings
 
-**Returns:**
+Returns:
 - `Future<File?>`: The captured image file, or `null` if the user cancelled
 
-**Example:**
+---
+
+##### `recordVideo`
+Opens the camera picker for recording a short video.
+
 ```dart
-final imageFile = await CameraPicker.takePicture(context);
+static Future<File?> recordVideo(
+  BuildContext context, {
+  Duration? maxDuration,
+  CameraConfig? config,
+})
 ```
+- `context`: Build context for navigation
+- `maxDuration`: Maximum duration for video recording (optional)
+- `config`: Optional [CameraConfig] for customizing recording settings
+
+Returns:
+- `Future<File?>`: The recorded video file, or `null` if the user cancelled
+
+---
 
 ##### `scanBarcode`
-
 Opens the camera picker for scanning barcodes/QR codes.
 
 ```dart
@@ -226,31 +298,26 @@ static Future<String?> scanBarcode(
   StreamCameraConfig? config,
 })
 ```
-
-**Parameters:**
 - `context`: Build context for navigation
 - `config`: Optional [StreamCameraConfig] for customizing scanning settings
 
-**Returns:**
+Returns:
 - `Future<String?>`: The scanned barcode value, or `null` if the user cancelled or no barcode was detected
 
-**Example:**
-```dart
-final barcode = await CameraPicker.scanBarcode(context);
-```
+---
 
 ### CameraConfig
 
-Configuration class for image capture.
+Configuration class for image capture and video recording.
 
-#### Properties
+Properties:
 
-- `quality` (int, default: 80): Image quality from 0 to 100
+- `quality` (int, default: 80): Image/video quality from 0 to 100
 - `showOverlay` (bool, default: true): Whether to show the document overlay
 - `overlayType` (OverlayType?, default: null): Type of overlay to display
 - `autoCropping` (bool, default: true): Enable automatic image cropping based on overlay
 
-#### Example
+Example:
 
 ```dart
 final config = CameraConfig(
@@ -265,7 +332,7 @@ final config = CameraConfig(
 
 Configuration class for barcode scanning.
 
-#### Properties
+Properties:
 
 - `showOverlay` (bool, default: true): Whether to show the scanning overlay
 - `autoTracking` (bool, default: true): Enable automatic barcode tracking
@@ -275,7 +342,7 @@ Configuration class for barcode scanning.
 - `deviceOrientation` (DeviceOrientation?, default: null): Device orientation
 - `enableLogging` (bool, default: kDebugMode): Enable debug logging
 
-#### Example
+Example:
 
 ```dart
 final config = StreamCameraConfig(
@@ -290,15 +357,14 @@ final config = StreamCameraConfig(
 
 Enumeration of supported document overlay types.
 
-#### Available Types
-
+**Available Types**:
 - **ID Cards**: `idCardIndonesia`, `idCardISO`, `ktp`, `npwp`, `bpjs`, `ktm`
 - **Passports**: `passport`, `passportPhoto`
 - **Photos**: `pasFoto2x3`, `pasFoto3x4`, `pasFoto4x6`, `pasFoto2R`, `pasFoto3R`, `pasFoto4R`, `pasFoto5R`, `pasFoto8R`, `pasFoto10R`
 - **Cards**: `creditCard`, `businessCard`, `simCard`
 - **Documents**: `a4`, `a5`, `a6`, `familyCard`
 
-#### Example
+Example:
 
 ```dart
 final config = CameraConfig(

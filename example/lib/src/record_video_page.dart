@@ -44,7 +44,13 @@ class RecordVideoPage extends StatelessWidget {
                   ),
                 ),
                 onPressed: () async {
-                  videoFile = await CameraPicker.videoRecord(context);
+                  videoFile = await CameraPicker.videoRecord(
+                    context,
+                    config: CameraVideoConfig(
+                      duration: 10000, // in milliseconds
+                      resolutionPreset: ResolutionPreset.high,
+                    ),
+                  );
                   if (videoFile != null) {
                     videoSize = videoFile!.lengthSync();
                   }
