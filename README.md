@@ -69,22 +69,19 @@ final imageFile = await CameraPicker.takePicture(context);
 
 if (imageFile != null) {
   // Use the captured image file
-  print('Image saved at: \\${imageFile.path}');
+  print('Image saved at: \${imageFile.path}');
 }
 ```
 
 #### Recording a Short Video
 
 ```dart
-// Record a short video (with optional max duration)
-final videoFile = await CameraPicker.recordVideo(
-  context,
-  maxDuration: Duration(seconds: 15), // Max duration (optional)
-);
+// Record a short video
+final videoFile = await CameraPicker.videoRecord(context);
 
 if (videoFile != null) {
   // Use the recorded video file
-  print('Video saved at: \\${videoFile.path}');
+  print('Video saved at: \${videoFile.path}');
 }
 ```
 
@@ -96,7 +93,7 @@ final barcodeResult = await CameraPicker.scanBarcode(context);
 
 if (barcodeResult != null) {
   // Use the scanned barcode value
-  print('Barcode value: \\${barcodeResult}');
+  print('Barcode value: \${barcodeResult}');
 }
 ```
 
@@ -106,8 +103,8 @@ if (barcodeResult != null) {
 
 ```dart
 // Configure image capture with custom settings
-final config = CameraConfig(
-  quality: 90,              // Image quality (0-100)
+final config = CameraPickerConfig(
+  quality: 80,              // Image quality (0-100)
   showOverlay: true,        // Show document overlay
   overlaySize: OverlaySize.paperA4(),  // Overlay size (e.g., KTP, passport, etc.)
   autoCropping: true,       // Enable automatic cropping
@@ -123,16 +120,16 @@ final imageFile = await CameraPicker.takePicture(
 
 ```dart
 // Configure barcode scanning with custom settings
-final config = StreamCameraConfig(
+final scannerConfig = CameraScannerConfig(
   targetFps: 15,              // Target frames per second for processing
-  showOverlay: true,          // Show scanning overlay
-  autoTracking: true,         // Enable auto-tracking
-  enableLogging: true,        // Enable debug logging
+  autoTracking: true,
+  barcodeFormat: [BarcodeFormat.qrCode],  // Enable auto-tracking
+  filterText: RegExp(r'[a-zA-Z'),        // Enable debug logging
 );
 
 final barcodeResult = await CameraPicker.scanBarcode(
   context,
-  config: config,
+  config: scannerConfig,
 );
 ```
 
@@ -189,7 +186,7 @@ class _HomePageState extends State<HomePage> {
               : Text('No image captured'),
             SizedBox(height: 20),
             _capturedVideo != null
-              ? Text('Video captured: \\${_capturedVideo!.path}')
+              ? Text('Video captured: \${_capturedVideo!.path}')
               : Text('No video captured'),
           ],
         ),
@@ -212,10 +209,7 @@ class _HomePageState extends State<HomePage> {
           SizedBox(height: 16),
           FloatingActionButton(
             onPressed: () async {
-              final videoFile = await CameraPicker.recordVideo(
-                context,
-                maxDuration: Duration(seconds: 15),
-              );
+              final videoFile = await CameraPicker.videoRecord(context);
               if (videoFile != null) {
                 setState(() {
                   _capturedVideo = videoFile;
@@ -231,7 +225,7 @@ class _HomePageState extends State<HomePage> {
               final barcode = await CameraPicker.scanBarcode(context);
               if (barcode != null) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Scanned: \\${barcode}')),
+                  SnackBar(content: Text('Scanned: \${barcode}')),
                 );
               }
             },
@@ -263,26 +257,24 @@ static Future<File?> takePicture(
 })
 ```
 - `context`: Build context for navigation
-- `config`: Optional [CameraConfig] for customizing capture settings
+- `config`: Optional [CameraPickerConfig] for customizing capture settings
 
 Returns:
 - `Future<File?>`: The captured image file, or `null` if the user cancelled
 
 ---
 
-##### `recordVideo`
+##### `videoRecord`
 Opens the camera picker for recording a short video.
 
 ```dart
-static Future<File?> recordVideo(
+static Future<File?> videoRecord(
   BuildContext context, {
-  Duration? maxDuration,
-  CameraConfig? config,
+  CameraVideoConfig? config,
 })
 ```
 - `context`: Build context for navigation
-- `maxDuration`: Maximum duration for video recording (optional)
-- `config`: Optional [CameraConfig] for customizing recording settings
+- `config`: Optional [CameraVideoConfig] for customizing recording settings
 
 Returns:
 - `Future<File?>`: The recorded video file, or `null` if the user cancelled
@@ -308,11 +300,11 @@ Returns:
 
 ### CameraConfig
 
-Configuration class for image capture and video recording.
+Configuration class for image capture.
 
 Properties:
 
-- `quality` (int, default: 80): Image/video quality from 0 to 100
+- `quality` (int, default: 80): Image quality from 0 to 100
 - `showOverlay` (bool, default: true): Whether to show the document overlay
 - `overlayType` (OverlayType?, default: null): Type of overlay to display
 - `autoCropping` (bool, default: true): Enable automatic image cropping based on overlay
@@ -325,6 +317,24 @@ final config = CameraConfig(
   showOverlay: true,
   overlayType: OverlayType.passport,
   autoCropping: true,
+);
+```
+
+### CameraVideoConfig
+
+Configuration class for video recording.
+
+Properties:
+
+- `duration` (int, default: 15000): Maximum video duration in milliseconds.
+- `resolutionPreset` (ResolutionPreset, default: ResolutionPreset.high): The resolution of the video.
+
+Example:
+
+```dart
+final config = CameraVideoConfig(
+  duration: 10000, // 10 seconds
+  resolutionPreset: ResolutionPreset.veryHigh,
 );
 ```
 
