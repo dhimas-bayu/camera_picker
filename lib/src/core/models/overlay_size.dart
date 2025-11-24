@@ -4,17 +4,42 @@ import 'dart:ui';
 class OverlaySize {
   final double width; // dalam mm
   final double height; // dalam mm
-  final String name;
-  final String description;
-  final String standard;
+  final String? name;
+  final String? description;
+  final String? standard;
 
-  const OverlaySize({
+  const OverlaySize._({
     required this.width,
     required this.height,
-    required this.name,
-    required this.description,
-    required this.standard,
+    this.name,
+    this.description,
+    this.standard,
   });
+
+  // Custom from size
+  factory OverlaySize.fromSize(Size size) {
+    return OverlaySize._(
+      width: size.width,
+      height: size.height,
+      name: 'Custom From Size',
+      description: 'Custom size from size',
+      standard: 'Custom',
+    );
+  }
+
+  // Custom Size
+  factory OverlaySize.custom({
+    required double width,
+    required double height,
+  }) {
+    return OverlaySize._(
+      width: width,
+      height: height,
+      name: 'Custom Size',
+      description: 'Custom size',
+      standard: 'Custom',
+    );
+  }
 
   // Passport Photo
   OverlaySize.passportPhoto()

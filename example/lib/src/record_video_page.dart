@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:camera_picker/camera_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart';
+import 'package:path/path.dart' show basename;
 
 class RecordVideoPage extends StatelessWidget {
   const RecordVideoPage({super.key});
