@@ -4,51 +4,86 @@ import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart
 
 import 'overlay_size.dart';
 
-@immutable
-class Config {
-  final int quality;
-  final bool showOverlay;
-  final OverlaySize? overlaySize;
-  final ResolutionPreset resolutionPreset;
+abstract class Config {
+  int get quality;
+  ResolutionPreset get resolutionPreset;
+  bool get showOverlay;
+  OverlaySize? get overlaySize;
 
-  const Config({
-    this.quality = 100,
-    this.showOverlay = true,
-    this.overlaySize,
-    this.resolutionPreset = ResolutionPreset.high,
-  });
 }
 
 class CameraPickerConfig extends Config {
+
+  @override
+  final int quality;
+
+  @override
+  ResolutionPreset get resolutionPreset => ResolutionPreset.high;
+
+  @override
+  final bool showOverlay;
+
+  @override
+  final OverlaySize? overlaySize;
+
   final bool autoCropping;
 
-  const CameraPickerConfig({
-    super.quality,
-    super.showOverlay,
-    super.overlaySize,
+  CameraPickerConfig({
+    this.quality = 100,
+    this.showOverlay = true,
+    this.overlaySize,
     this.autoCropping = false,
   });
 }
 
 class CameraScannerConfig extends Config {
+
+  @override
+  int get quality => 100;
+
+  @override
+  ResolutionPreset get resolutionPreset => ResolutionPreset.high;
+
+  @override
+  bool get showOverlay => true;
+
+  @override
+  OverlaySize? get overlaySize => null;
+
+
   final int targetFps;
   final bool autoTracking;
   final List<BarcodeFormat> barcodeFormat;
   final RegExp? filterText;
 
-  const CameraScannerConfig({
+  CameraScannerConfig({
     this.targetFps = 10,
     this.barcodeFormat = const [BarcodeFormat.qrCode],
     this.autoTracking = true,
     this.filterText,
   });
+
 }
 
 class CameraVideoConfig extends Config {
+
+
+  @override
+  int get quality => 100;
+
+  @override
+  final ResolutionPreset resolutionPreset;
+
+  @override
+  bool get showOverlay => false;
+
+  @override
+  OverlaySize? get overlaySize => null;
+
   final int duration;
 
-  const CameraVideoConfig({
+  CameraVideoConfig({
     this.duration = 10000,
-    super.resolutionPreset,
+    this.resolutionPreset = ResolutionPreset.high,
   });
 }

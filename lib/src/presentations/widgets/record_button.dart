@@ -51,8 +51,12 @@ class _RecordButtonState extends State<RecordButton>
   }
 
   void _cameraListener() {
-    final isRecording = widget.controller?.value.isRecordingVideo;
-    _recordNotifier.value = isRecording ?? false;
+    final isRecording = widget.controller?.value.isRecordingVideo ?? false;
+    _recordNotifier.value = isRecording;
+
+    if(isRecording) {
+      _controller.forward();
+    }
   }
 
   void _animateListener() {
@@ -112,7 +116,6 @@ class _RecordButtonState extends State<RecordButton>
               _controller.reset();
               widget.onStopRecording?.call();
             } else {
-              _controller.forward();
               widget.onStartRecording?.call();
             }
           },

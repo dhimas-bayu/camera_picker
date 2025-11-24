@@ -62,6 +62,7 @@ class _ImageCaptureViewState extends State<ImageCaptureView> {
           cameras: widget.cameras,
           initCamera: _camera,
           initFlashMode: _flashMode,
+          resolutionPreset: widget.config.resolutionPreset,
           onPreviewBuilder: _buildOverlay,
           onSwitchCamera: (description) {
             _camera = description;

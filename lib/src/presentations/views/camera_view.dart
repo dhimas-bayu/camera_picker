@@ -23,7 +23,7 @@ class CameraView extends StatefulWidget {
     super.key,
     this.mode = CameraMode.takePicture,
     required this.cameras,
-    this.resolutionPreset,
+    required this.resolutionPreset,
     this.initCamera,
     this.initFlashMode,
     this.recordingDuration,
@@ -42,7 +42,7 @@ class CameraView extends StatefulWidget {
   final CameraMode mode;
   final List<CameraDescription> cameras;
   final CameraDescription? initCamera;
-  final ResolutionPreset? resolutionPreset;
+  final ResolutionPreset resolutionPreset;
   final FlashMode? initFlashMode;
   final Duration? recordingDuration;
   final int targetStreamFPS;
@@ -277,7 +277,7 @@ class _CameraViewState extends State<CameraView>
   }) async {
     _cameras = widget.cameras;
     _description = description ?? _cameras.first;
-    if (_validFlashMode.isEmpty) _availablesFlashMode();
+    if (_validFlashMode.isEmpty) _availableFlashModes();
 
     ImageFormatGroup? imageFormatGroup = switch (widget.mode) {
       CameraMode.takePicture => ImageFormatGroup.jpeg,
@@ -286,7 +286,7 @@ class _CameraViewState extends State<CameraView>
 
     final cameraController = CameraController(
       _description!,
-      widget.resolutionPreset ?? ResolutionPreset.high,
+      widget.resolutionPreset,
       imageFormatGroup: imageFormatGroup,
       enableAudio: false,
     );
@@ -335,11 +335,11 @@ class _CameraViewState extends State<CameraView>
         });
       }
     } on CameraException catch (e) {
-      debugPrint(e.toString());
+      _showErrorMessage(e.toString());
     }
   }
 
-  void _availablesFlashMode() {
+  void _availableFlashModes() {
     for (final mode in CameraMode.values) {
       List<FlashMode> flashMode = switch (mode) {
         CameraMode.takePicture => FlashMode.values,
@@ -393,6 +393,9 @@ class _CameraViewState extends State<CameraView>
 
         widget.onTakePicture?.call(_dataTakeCamera);
       },
+      onError: (e) {
+        _showErrorMessage(e.toString());
+      },
     );
   }
 
@@ -404,6 +407,9 @@ class _CameraViewState extends State<CameraView>
       callback: (controller) async {
         if (controller.value.isRecordingVideo) return;
         await controller.startVideoRecording();
+      },
+      onError: (e) {
+        _showErrorMessage(e.toString());
       },
     );
   }
@@ -421,6 +427,9 @@ class _CameraViewState extends State<CameraView>
         );
 
         widget.onRecordVideo?.call(_dataVideoCamera);
+      },
+      onError: (e) {
+        _showErrorMessage(e.toString());
       },
     );
   }
@@ -441,6 +450,9 @@ class _CameraViewState extends State<CameraView>
       callback: (controller) async {
         await controller.setZoomLevel(zoom);
         _currentScale.value = zoom;
+      },
+      onError: (e) {
+        _showErrorMessage(e.toString());
       },
     );
   }
@@ -473,6 +485,9 @@ class _CameraViewState extends State<CameraView>
           () => _focusOffset.value = null,
         );
       },
+      onError: (e) {
+        _showErrorMessage(e.toString());
+      },
     );
   }
 
@@ -502,6 +517,9 @@ class _CameraViewState extends State<CameraView>
 
         await _initCameras(description: description);
       },
+      onError: (e) {
+        _showErrorMessage(e.toString());
+      },
     );
   }
 
@@ -515,6 +533,31 @@ class _CameraViewState extends State<CameraView>
         await controller.setFlashMode(flashMode);
         _flashMode = flashMode;
         widget.onSwitchFlash?.call(_flashMode);
+      },
+      onError: (e) {
+        _showErrorMessage(e.toString());
+      },
+    );
+  }
+
+  Future<void> _showErrorMessage(String message) async {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog.adaptive(
+          title: const Text("Camera Picker"),
+          titleTextStyle: const TextStyle(fontSize: 16.0, color: Colors.black),
+          content: Text(message),
+          contentTextStyle: const TextStyle(fontSize: 14.0, color: Colors.black),
+          actions: [
+            TextButton(
+              child: const Text("OK"),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        );
       },
     );
   }

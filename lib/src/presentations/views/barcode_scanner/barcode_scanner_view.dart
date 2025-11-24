@@ -81,6 +81,7 @@ class _BarcodeScannerViewState extends State<BarcodeScannerView>
   Widget build(BuildContext context) {
     return CameraView(
       mode: CameraMode.scanBarcode,
+      resolutionPreset: widget.config.resolutionPreset,
       cameras: widget.cameras,
       targetStreamFPS: widget.config.targetFps,
       onPreviewBuilder: _buildOverlay,

@@ -35,7 +35,7 @@ class CameraPicker extends StatefulWidget {
       MaterialPageRoute(
         builder: (context) => CameraPicker._(
           action: CameraMode.takePicture,
-          config: config ?? const CameraPickerConfig(),
+          config: config ?? CameraPickerConfig(),
         ),
       ),
     );
@@ -49,7 +49,7 @@ class CameraPicker extends StatefulWidget {
       MaterialPageRoute(
         builder: (context) => CameraPicker._(
           action: CameraMode.scanBarcode,
-          config: config ?? const CameraScannerConfig(),
+          config: config ?? CameraScannerConfig(),
         ),
       ),
     );
@@ -63,7 +63,7 @@ class CameraPicker extends StatefulWidget {
       MaterialPageRoute(
         builder: (context) => CameraPicker._(
           action: CameraMode.videoRecord,
-          config: config ?? const CameraVideoConfig(),
+          config: config ?? CameraVideoConfig(),
         ),
       ),
     );

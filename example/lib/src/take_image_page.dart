@@ -83,7 +83,7 @@ class _TakeImagePageState extends State<TakeImagePage> {
                       context,
                       config: CameraPickerConfig(
                         showOverlay: false,
-                        autoCropping: false,
+                        autoCropping: true,
                         quality: 80,
                       ),
                     );
