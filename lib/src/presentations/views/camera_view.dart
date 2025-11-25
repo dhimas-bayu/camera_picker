@@ -6,6 +6,7 @@ import 'package:camera_picker/src/core/models/data_video_camera.dart';
 import 'package:camera_picker/src/presentations/widgets/record_button.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../../camera_picker.dart';
 import '../../core/models/data_stream_camera.dart';
@@ -539,6 +540,7 @@ class _CameraViewState extends State<CameraView>
       },
     );
   }
+
 
   Future<void> _showErrorMessage(String message) async {
     showDialog(

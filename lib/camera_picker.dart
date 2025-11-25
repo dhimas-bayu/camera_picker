@@ -1,8 +1,10 @@
 import 'dart:io';
 
 import 'package:camera/camera.dart';
+import 'package:camera_picker/src/presentations/views/permission_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'src/core/models/camera_config.dart';
 import 'src/presentations/views/barcode_scanner/barcode_scanner_view.dart';
@@ -93,16 +95,21 @@ class _CameraPickerState extends State<CameraPicker> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: FutureBuilder(
-        future: availableCameras(),
+        future: _checkPermissions(),
         builder: (context, asyncSnapshot) {
           if (asyncSnapshot.connectionState != ConnectionState.done) {
             return const SizedBox.shrink();
           }
 
+          final cameras = asyncSnapshot.data;
+          if (cameras == null) {
+            return const PermissionView();
+          }
+
           switch (widget.action) {
             case CameraMode.takePicture:
               return ImageCaptureView(
-                cameras: asyncSnapshot.requireData,
+                cameras: cameras,
                 config: widget.config as CameraPickerConfig,
                 onTakePicture: (file) {
                   Navigator.pop(context, file);
@@ -110,7 +117,7 @@ class _CameraPickerState extends State<CameraPicker> {
               );
             case CameraMode.scanBarcode:
               return BarcodeScannerView(
-                cameras: asyncSnapshot.requireData,
+                cameras: cameras,
                 config: widget.config as CameraScannerConfig,
                 onBarcodeScanned: (value) {
                   Navigator.pop(context, value);
@@ -118,7 +125,7 @@ class _CameraPickerState extends State<CameraPicker> {
               );
             case CameraMode.videoRecord:
               return VideoRecordView(
-                cameras: asyncSnapshot.requireData,
+                cameras: cameras,
                 config: widget.config as CameraVideoConfig,
                 onRecorded: (file) {
                   Navigator.pop(context, file);
@@ -128,5 +135,19 @@ class _CameraPickerState extends State<CameraPicker> {
         },
       ),
     );
+  }
+
+  Future<List<CameraDescription>?> _checkPermissions() async {
+    final statuses = await [
+      Permission.camera,
+      Permission.microphone,
+    ].request();
+
+    final isGranted = statuses.values.every((status) {
+      return status == PermissionStatus.granted;
+    });
+
+    if (!isGranted) return null;
+    return await availableCameras();
   }
 }
