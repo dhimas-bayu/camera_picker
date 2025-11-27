@@ -8,11 +8,9 @@ abstract class Config {
   ResolutionPreset get resolutionPreset;
   bool get showOverlay;
   OverlaySize? get overlaySize;
-
 }
 
 class CameraPickerConfig extends Config {
-
   @override
   final int quality;
 
@@ -36,7 +34,6 @@ class CameraPickerConfig extends Config {
 }
 
 class CameraScannerConfig extends Config {
-
   @override
   int get quality => 100;
 
@@ -49,7 +46,6 @@ class CameraScannerConfig extends Config {
   @override
   OverlaySize? get overlaySize => null;
 
-
   final int targetFps;
   final bool autoTracking;
   final List<BarcodeFormat> barcodeFormat;
@@ -61,12 +57,9 @@ class CameraScannerConfig extends Config {
     this.autoTracking = true,
     this.filterText,
   });
-
 }
 
 class CameraVideoConfig extends Config {
-
-
   @override
   int get quality => 100;
 

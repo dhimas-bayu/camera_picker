@@ -2,7 +2,12 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 class CaptureButton extends StatelessWidget {
-  const CaptureButton({super.key, this.controller, this.onTakePicture});
+  const CaptureButton({
+    super.key,
+    this.controller,
+    this.onTakePicture,
+  });
+
   final CameraController? controller;
   final VoidCallback? onTakePicture;
 

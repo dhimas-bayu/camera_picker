@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:camera/camera.dart';
+import 'package:camera_picker/src/core/models/data_take_camera.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../../../camera_picker.dart';
@@ -70,47 +71,46 @@ class _ImageCaptureViewState extends State<ImageCaptureView> {
           onSwitchFlash: (flashMode) {
             _flashMode = flashMode;
           },
-          onTakePicture: (dataCamera) async {
-            File? resultFile = dataCamera?.imageFile;
-            if (resultFile == null) return;
-
-            final isFront =
-                (_camera?.lensDirection == CameraLensDirection.front);
-
-            final config = widget.config;
-            final imageBytes = await resultFile.readAsBytes();
-            final shouldCrop =
-                config.autoCropping &&
-                _boundingBox != null &&
-                _layoutSize != null;
-            final shouldCompress = config.quality < 100;
-
-            if (!shouldCrop && !shouldCompress) {
-              _imageFile.value = isFront
-                  ? await ImageUtils.flipHorizontal(imageBytes)
-                  : resultFile;
-              return;
-            }
-
-            if (!shouldCrop) {
-              _imageFile.value = await ImageUtils.compressImageToFile(
-                imageBytes: imageBytes,
-                quality: config.quality,
-                flippedHorizontal: isFront,
-              );
-              return;
-            }
-
-            _imageFile.value = await ImageUtils.cropImageFromFile(
-              imageBytes: imageBytes,
-              screenRect: _boundingBox!,
-              displaySize: _layoutSize!,
-              quality: config.quality,
-              flippedHorizontal: isFront,
-            );
-          },
+          onTakePicture: _handleTakePicture,
         );
       },
+    );
+  }
+
+  Future<void> _handleTakePicture(DataTakeCamera? data) async {
+    File? resultFile = data?.imageFile;
+    if (resultFile == null) return;
+
+    final isFront = (_camera?.lensDirection == CameraLensDirection.front);
+
+    final config = widget.config;
+    final imageBytes = await resultFile.readAsBytes();
+    final shouldCrop =
+        config.autoCropping && _boundingBox != null && _layoutSize != null;
+    final shouldCompress = config.quality < 100;
+
+    if (!shouldCrop && !shouldCompress) {
+      _imageFile.value = isFront
+          ? await ImageUtils.flipHorizontal(imageBytes)
+          : resultFile;
+      return;
+    }
+
+    if (!shouldCrop) {
+      _imageFile.value = await ImageUtils.compressImageToFile(
+        imageBytes: imageBytes,
+        quality: config.quality,
+        flippedHorizontal: isFront,
+      );
+      return;
+    }
+
+    _imageFile.value = await ImageUtils.cropImageFromFile(
+      imageBytes: imageBytes,
+      screenRect: _boundingBox!,
+      displaySize: _layoutSize!,
+      quality: config.quality,
+      flippedHorizontal: isFront,
     );
   }
 

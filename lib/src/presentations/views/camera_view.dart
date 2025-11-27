@@ -6,7 +6,6 @@ import 'package:camera_picker/src/core/models/data_video_camera.dart';
 import 'package:camera_picker/src/presentations/widgets/record_button.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../../../camera_picker.dart';
 import '../../core/models/data_stream_camera.dart';
@@ -277,7 +276,13 @@ class _CameraViewState extends State<CameraView>
     CameraDescription? description,
   }) async {
     _cameras = widget.cameras;
-    _description = description ?? _cameras.first;
+
+    if (_cameras.isEmpty) {
+      _showErrorMessage("Camera not detected");
+      return;
+    }
+
+    _description = description ?? _initCameraDescription();
     if (_validFlashMode.isEmpty) _availableFlashModes();
 
     ImageFormatGroup? imageFormatGroup = switch (widget.mode) {
@@ -338,6 +343,13 @@ class _CameraViewState extends State<CameraView>
     } on CameraException catch (e) {
       _showErrorMessage(e.toString());
     }
+  }
+
+  CameraDescription _initCameraDescription() {
+    final backCamera = _cameras.firstWhereOrNull((e) {
+      return e.lensDirection == CameraLensDirection.back;
+    });
+    return backCamera ?? _cameras[0];
   }
 
   void _availableFlashModes() {
@@ -541,7 +553,6 @@ class _CameraViewState extends State<CameraView>
     );
   }
 
-
   Future<void> _showErrorMessage(String message) async {
     showDialog(
       context: context,
@@ -550,7 +561,10 @@ class _CameraViewState extends State<CameraView>
           title: const Text("Camera Picker"),
           titleTextStyle: const TextStyle(fontSize: 16.0, color: Colors.black),
           content: Text(message),
-          contentTextStyle: const TextStyle(fontSize: 14.0, color: Colors.black),
+          contentTextStyle: const TextStyle(
+            fontSize: 14.0,
+            color: Colors.black,
+          ),
           actions: [
             TextButton(
               child: const Text("OK"),
