@@ -5,13 +5,13 @@ import 'package:camera/camera.dart';
 Future<T?> callbackWrapper<T>(
   String key, {
   CameraController? controller,
-  bool isDisposed = false,
+  bool? isDisposed,
   Future<T> Function(CameraController)? callback,
   Function(Object)? onError,
   bool showLogDebug = true,
 }) async {
   try {
-    if (isDisposed) {
+    if (isDisposed == true) {
       if (showLogDebug) {
         development.log("[$key] ERROR : CAMERA CONTROLLER DISPOSED");
       }

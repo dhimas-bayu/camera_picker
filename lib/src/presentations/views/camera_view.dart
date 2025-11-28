@@ -99,7 +99,7 @@ class _CameraViewState extends State<CameraView>
 
   DataVideoCamera _dataVideoCamera = const DataVideoCamera();
 
-  bool _disposed = false;
+  bool? _disposed;
 
   @override
   void initState() {
@@ -115,7 +115,7 @@ class _CameraViewState extends State<CameraView>
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
+  Future<void> didChangeAppLifecycleState(AppLifecycleState state) async {
     final CameraController? cameraController = _controller;
     if (cameraController == null || !cameraController.value.isInitialized) {
       return;
@@ -124,8 +124,9 @@ class _CameraViewState extends State<CameraView>
     if (state == AppLifecycleState.resumed) {
       _initCameras(description: cameraController.description);
     } else if (state == AppLifecycleState.inactive) {
-      _disposed = true;
-      cameraController.dispose();
+      cameraController.dispose().then((_) {
+        _disposed = true;
+      });
     }
   }
 
@@ -133,10 +134,10 @@ class _CameraViewState extends State<CameraView>
   void dispose() {
     SystemChrome.setPreferredOrientations([]);
     WidgetsBinding.instance.removeObserver(this);
+    _controller?.dispose();
     _currentExposure.dispose();
     _currentScale.dispose();
     _focusOffset.dispose();
-    _controller?.dispose();
     _controller = null;
     _disposed = true;
     super.dispose();
@@ -283,6 +284,7 @@ class _CameraViewState extends State<CameraView>
       });
     }
 
+    if (_disposed == false) return;
     _description = description ?? _initCameraDescription();
     if (_validFlashMode.isEmpty) _availableFlashModes();
 
@@ -300,7 +302,6 @@ class _CameraViewState extends State<CameraView>
     _controller = cameraController;
     cameraController.addListener(() {
       if (mounted) {
-        _disposed = false;
         setState(() {});
       }
 
@@ -314,6 +315,7 @@ class _CameraViewState extends State<CameraView>
     try {
       await cameraController.initialize();
       if (cameraController.value.isInitialized) {
+        _disposed = false;
         widget.onSwitchCamera?.call(_description);
       }
 
