@@ -128,6 +128,7 @@ class _CameraViewState extends State<CameraView>
     }
 
     if (state == AppLifecycleState.resumed) {
+      _state = CameraState.init;
       _initCameras(description: cameraController.description);
     } else if (state == AppLifecycleState.inactive) {
       _state = CameraState.rebuild;
@@ -289,7 +290,7 @@ class _CameraViewState extends State<CameraView>
       });
     }
 
-    if (_state == CameraState.dispose) {
+    if (_state != CameraState.init) {
       debugPrint("CONTROLLER IS DISPOSED");
       return;
     }
@@ -327,7 +328,6 @@ class _CameraViewState extends State<CameraView>
       if (!mounted) return;
 
       if (cameraController.value.isInitialized) {
-        _state = CameraState.init;
         widget.onSwitchCamera?.call(_description);
       }
 
