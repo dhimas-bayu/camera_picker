@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:camera_picker/src/presentations/views/permission_view.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'src/core/models/camera_config.dart';
@@ -32,8 +31,8 @@ class CameraPicker extends StatelessWidget {
   static Future<File?> takePicture(
     BuildContext context, {
     CameraPickerConfig? config,
-  }) async {
-    return await Navigator.of(context, rootNavigator: true).push<File?>(
+  }) {
+    return Navigator.of(context, rootNavigator: true).push<File?>(
       MaterialPageRoute(
         builder: (context) => CameraPicker._(
           action: CameraMode.takePicture,
@@ -46,8 +45,8 @@ class CameraPicker extends StatelessWidget {
   static Future<String?> scanBarcode(
     BuildContext context, {
     CameraScannerConfig? config,
-  }) async {
-    return await Navigator.of(context, rootNavigator: true).push<String?>(
+  }) {
+    return Navigator.of(context, rootNavigator: true).push<String?>(
       MaterialPageRoute(
         builder: (context) => CameraPicker._(
           action: CameraMode.scanBarcode,
@@ -60,8 +59,8 @@ class CameraPicker extends StatelessWidget {
   static Future<File?> videoRecord(
     BuildContext context, {
     CameraVideoConfig? config,
-  }) async {
-    return await Navigator.of(context, rootNavigator: true).push<File?>(
+  }) {
+    return Navigator.of(context, rootNavigator: true).push<File?>(
       MaterialPageRoute(
         builder: (context) => CameraPicker._(
           action: CameraMode.videoRecord,
