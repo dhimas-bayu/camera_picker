@@ -99,7 +99,9 @@ class _CameraViewState extends State<CameraView>
 
   DataVideoCamera _dataVideoCamera = const DataVideoCamera();
 
-  bool? _disposed;
+  bool _isDisposed = false;
+
+  bool _isRebuild = false;
 
   @override
   void initState() {
@@ -125,7 +127,8 @@ class _CameraViewState extends State<CameraView>
       _initCameras(description: cameraController.description);
     } else if (state == AppLifecycleState.inactive) {
       cameraController.dispose().then((_) {
-        _disposed = true;
+        _isDisposed = true;
+        _isRebuild = true;
       });
     }
   }
@@ -134,12 +137,12 @@ class _CameraViewState extends State<CameraView>
   void dispose() {
     SystemChrome.setPreferredOrientations([]);
     WidgetsBinding.instance.removeObserver(this);
+    _isDisposed = true;
     _controller?.dispose();
     _currentExposure.dispose();
     _currentScale.dispose();
     _focusOffset.dispose();
     _controller = null;
-    _disposed = true;
     super.dispose();
   }
 
@@ -284,7 +287,13 @@ class _CameraViewState extends State<CameraView>
       });
     }
 
-    if (_disposed == false) return;
+    if (_isDisposed && !_isRebuild) {
+      debugPrint("CONTROLLER IS DISPOSED");
+      return;
+    }
+
+    _isRebuild = false;
+    _isDisposed = false;
     _description = description ?? _initCameraDescription();
     if (_validFlashMode.isEmpty) _availableFlashModes();
 
@@ -315,7 +324,7 @@ class _CameraViewState extends State<CameraView>
     try {
       await cameraController.initialize();
       if (cameraController.value.isInitialized) {
-        _disposed = false;
+        _isDisposed = false;
         widget.onSwitchCamera?.call(_description);
       }
 
@@ -345,7 +354,8 @@ class _CameraViewState extends State<CameraView>
       }
     } on CameraException catch (e) {
       _showErrorMessage(e.toString());
-    }
+      rethrow;
+    } finally {}
   }
 
   CameraDescription _initCameraDescription() {
@@ -397,7 +407,7 @@ class _CameraViewState extends State<CameraView>
   Future<void> _handleTakePicture() async {
     await callbackWrapper<void>(
       "TAKE PICTURE",
-      isDisposed: _disposed,
+      isDisposed: _isDisposed,
       controller: _controller,
       callback: (controller) async {
         if (controller.value.isTakingPicture) return;
@@ -418,7 +428,7 @@ class _CameraViewState extends State<CameraView>
   Future<void> _handleStartRecording() async {
     await callbackWrapper<void>(
       "START RECORDING VIDEO",
-      isDisposed: _disposed,
+      isDisposed: _isDisposed,
       controller: _controller,
       callback: (controller) async {
         if (controller.value.isRecordingVideo) return;
@@ -433,7 +443,7 @@ class _CameraViewState extends State<CameraView>
   Future<void> _handleStopRecording() async {
     await callbackWrapper<void>(
       "STOP RECORDING VIDEO",
-      isDisposed: _disposed,
+      isDisposed: _isDisposed,
       controller: _controller,
       callback: (controller) async {
         if (!controller.value.isRecordingVideo) return;
@@ -461,7 +471,7 @@ class _CameraViewState extends State<CameraView>
 
     await callbackWrapper<void>(
       "SET ZOOM LEVEL",
-      isDisposed: _disposed,
+      isDisposed: _isDisposed,
       controller: _controller,
       callback: (controller) async {
         await controller.setZoomLevel(zoom);
@@ -485,7 +495,7 @@ class _CameraViewState extends State<CameraView>
   Future<void> _handleFocus(Offset offset) async {
     await callbackWrapper(
       "SET FOCUS POINT",
-      isDisposed: _disposed,
+      isDisposed: _isDisposed,
       controller: _controller,
       callback: (controller) async {
         _focusOffset.value = offset;
@@ -524,7 +534,7 @@ class _CameraViewState extends State<CameraView>
   Future<void> _handleSwitchCamera(CameraLensDirection? direction) async {
     await callbackWrapper(
       "SWITCH CAMERA",
-      isDisposed: _disposed,
+      isDisposed: _isDisposed,
       controller: _controller,
       callback: (controller) async {
         final description = _cameras.firstWhereOrNull(
@@ -543,7 +553,7 @@ class _CameraViewState extends State<CameraView>
     if (flashMode == null) return;
     await callbackWrapper(
       "SWITCH FLASH MODE",
-      isDisposed: _disposed,
+      isDisposed: _isDisposed,
       controller: _controller,
       callback: (controller) async {
         await controller.setFlashMode(flashMode);
