@@ -128,7 +128,6 @@ class _CameraViewState extends State<CameraView>
     }
 
     if (state == AppLifecycleState.resumed) {
-      _state = CameraState.init;
       _initCameras(description: cameraController.description);
     } else if (state == AppLifecycleState.inactive) {
       _state = CameraState.rebuild;
@@ -290,7 +289,7 @@ class _CameraViewState extends State<CameraView>
       });
     }
 
-    if (_state != CameraState.init) {
+    if (_state == CameraState.dispose) {
       debugPrint("CONTROLLER IS DISPOSED");
       return;
     }
@@ -325,11 +324,12 @@ class _CameraViewState extends State<CameraView>
 
     try {
       await cameraController.initialize();
-      if (!mounted) return;
-
       if (cameraController.value.isInitialized) {
+        _state = CameraState.init;
         widget.onSwitchCamera?.call(_description);
       }
+
+      if (!mounted) return;
 
       await Future.wait([
         cameraController.getMaxExposureOffset().then((value) {
@@ -356,10 +356,10 @@ class _CameraViewState extends State<CameraView>
         });
       }
     } on CameraException catch (e) {
-      _showErrorMessage(e.toString());
+      debugPrint(e.toString());
       rethrow;
     } on Exception catch (e) {
-      _showErrorMessage(e.toString());
+      debugPrint(e.toString());
       rethrow;
     }
   }
