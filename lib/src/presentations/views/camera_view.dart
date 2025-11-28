@@ -308,6 +308,7 @@ class _CameraViewState extends State<CameraView>
       imageFormatGroup: imageFormatGroup,
       enableAudio: false,
     );
+
     _controller = cameraController;
     cameraController.addListener(() {
       if (mounted) {
@@ -323,6 +324,8 @@ class _CameraViewState extends State<CameraView>
 
     try {
       await cameraController.initialize();
+      if (!mounted) return;
+
       if (cameraController.value.isInitialized) {
         _isDisposed = false;
         widget.onSwitchCamera?.call(_description);
@@ -355,7 +358,10 @@ class _CameraViewState extends State<CameraView>
     } on CameraException catch (e) {
       _showErrorMessage(e.toString());
       rethrow;
-    } finally {}
+    } on Exception catch (e) {
+      _showErrorMessage(e.toString());
+      rethrow;
+    }
   }
 
   CameraDescription _initCameraDescription() {
