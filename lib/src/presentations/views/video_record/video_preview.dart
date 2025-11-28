@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:camera_picker/src/presentations/widgets/confirm_button.dart';
+import '../../widgets/confirm_button.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 

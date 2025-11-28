@@ -21,7 +21,7 @@ export 'src/core/models/overlay_size.dart';
 
 enum CameraMode { takePicture, scanBarcode, videoRecord }
 
-class CameraPicker extends StatefulWidget {
+class CameraPicker extends StatelessWidget {
   const CameraPicker._({
     required this.action,
     required this.config,
@@ -72,25 +72,6 @@ class CameraPicker extends StatefulWidget {
   }
 
   @override
-  State<CameraPicker> createState() => _CameraPickerState();
-}
-
-class _CameraPickerState extends State<CameraPicker> {
-  @override
-  void initState() {
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
@@ -101,53 +82,60 @@ class _CameraPickerState extends State<CameraPicker> {
             return const SizedBox.shrink();
           }
 
-          final cameras = asyncSnapshot.data;
-          if (cameras == null) {
+          final isGranted = asyncSnapshot.data ?? false;
+          if (!isGranted) {
             return const PermissionView();
           }
 
-          switch (widget.action) {
-            case CameraMode.takePicture:
-              return ImageCaptureView(
-                cameras: cameras,
-                config: widget.config as CameraPickerConfig,
-                onTakePicture: (file) {
-                  Navigator.pop(context, file);
-                },
-              );
-            case CameraMode.scanBarcode:
-              return BarcodeScannerView(
-                cameras: cameras,
-                config: widget.config as CameraScannerConfig,
-                onBarcodeScanned: (value) {
-                  Navigator.pop(context, value);
-                },
-              );
-            case CameraMode.videoRecord:
-              return VideoRecordView(
-                cameras: cameras,
-                config: widget.config as CameraVideoConfig,
-                onRecorded: (file) {
-                  Navigator.pop(context, file);
-                },
-              );
-          }
+          return FutureBuilder(
+            future: availableCameras(),
+            builder: (context, asyncSnapshot) {
+              if (asyncSnapshot.connectionState != ConnectionState.done) {
+                return const SizedBox.shrink();
+              }
+
+              final cameras = asyncSnapshot.data ?? <CameraDescription>[];
+              switch (action) {
+                case CameraMode.takePicture:
+                  return ImageCaptureView(
+                    cameras: cameras,
+                    config: config as CameraPickerConfig,
+                    onTakePicture: (file) {
+                      Navigator.pop(context, file);
+                    },
+                  );
+                case CameraMode.scanBarcode:
+                  return BarcodeScannerView(
+                    cameras: cameras,
+                    config: config as CameraScannerConfig,
+                    onBarcodeScanned: (value) {
+                      Navigator.pop(context, value);
+                    },
+                  );
+                case CameraMode.videoRecord:
+                  return VideoRecordView(
+                    cameras: cameras,
+                    config: config as CameraVideoConfig,
+                    onRecorded: (file) {
+                      Navigator.pop(context, file);
+                    },
+                  );
+              }
+            },
+          );
         },
       ),
     );
   }
 
-  Future<List<CameraDescription>?> _checkPermissions() async {
+  Future<bool> _checkPermissions() async {
     final statuses = await [
       Permission.camera,
       Permission.microphone,
     ].request();
 
-    final isGranted = statuses.values.every((status) {
+    return statuses.values.every((status) {
       return status == PermissionStatus.granted;
     });
-
-    if (!isGranted) return null;
-    return await availableCameras();
   }
 }

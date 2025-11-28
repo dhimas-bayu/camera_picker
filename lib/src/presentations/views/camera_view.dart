@@ -2,10 +2,11 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
-import 'package:camera_picker/src/core/models/data_video_camera.dart';
-import 'package:camera_picker/src/presentations/widgets/record_button.dart';
+import '../../core/models/data_video_camera.dart';
+import '../widgets/record_button.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../camera_picker.dart';
 import '../../core/models/data_stream_camera.dart';
@@ -21,9 +22,9 @@ typedef PreviewBuilder =
 class CameraView extends StatefulWidget {
   CameraView({
     super.key,
-    this.mode = CameraMode.takePicture,
     required this.cameras,
     required this.resolutionPreset,
+    this.mode = CameraMode.takePicture,
     this.initCamera,
     this.initFlashMode,
     this.recordingDuration,
@@ -34,10 +35,7 @@ class CameraView extends StatefulWidget {
     this.onTakePicture,
     this.onStreamCamera,
     this.onRecordVideo,
-  }) : assert(
-         cameras.isNotEmpty,
-         "Cameras list cannot be empty.",
-       );
+  });
 
   final CameraMode mode;
   final List<CameraDescription> cameras;
@@ -106,6 +104,11 @@ class _CameraViewState extends State<CameraView>
   @override
   void initState() {
     super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+
     WidgetsBinding.instance.addObserver(this);
     _flashMode = widget.initFlashMode;
     _initCameras(description: widget.initCamera);
@@ -113,16 +116,13 @@ class _CameraViewState extends State<CameraView>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    debugPrint("CURRENT STATE : $state");
     final CameraController? cameraController = _controller;
     if (cameraController == null || !cameraController.value.isInitialized) {
       return;
     }
 
     if (state == AppLifecycleState.resumed) {
-      _initCameras(
-        description: cameraController.description,
-      );
+      _initCameras(description: cameraController.description);
     } else if (state == AppLifecycleState.inactive) {
       _disposed = true;
       cameraController.dispose();
@@ -131,6 +131,7 @@ class _CameraViewState extends State<CameraView>
 
   @override
   void dispose() {
+    SystemChrome.setPreferredOrientations([]);
     WidgetsBinding.instance.removeObserver(this);
     _currentExposure.dispose();
     _currentScale.dispose();
@@ -143,7 +144,6 @@ class _CameraViewState extends State<CameraView>
 
   @override
   Widget build(BuildContext context) {
-    debugPrint("REBUILD CAMERA");
     if (_controller == null) {
       return const SizedBox.shrink();
     }
@@ -276,10 +276,11 @@ class _CameraViewState extends State<CameraView>
     CameraDescription? description,
   }) async {
     _cameras = widget.cameras;
-
     if (_cameras.isEmpty) {
-      _showErrorMessage("Camera not detected");
-      return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showErrorMessage("Camera not detected");
+        return;
+      });
     }
 
     _description = description ?? _initCameraDescription();
