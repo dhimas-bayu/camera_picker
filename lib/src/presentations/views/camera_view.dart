@@ -177,7 +177,7 @@ class _CameraViewState extends State<CameraView>
                 GestureDetector(
                   onScaleStart: _handleScaleStart,
                   onScaleUpdate: _handleScaleUpdate,
-                  onTapDown: (details) async {
+                  onDoubleTapDown: (details) async {
                     return _onViewFinderTap(details, constraints);
                   },
                 ),
