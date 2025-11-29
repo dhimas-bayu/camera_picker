@@ -11,7 +11,7 @@ import 'package:flutter/services.dart';
 import '../../../camera_picker.dart';
 import '../../core/models/data_stream_camera.dart';
 import '../../core/models/data_take_camera.dart';
-import '../../core/utils/callback_wrapper.dart';
+import '../../core/utils/method_wrapper.dart';
 import '../widgets/camera_switcher.dart';
 import '../widgets/capture_button.dart';
 import '../widgets/flash_mode_switcher.dart';
@@ -19,7 +19,7 @@ import '../widgets/flash_mode_switcher.dart';
 typedef PreviewBuilder =
     Widget Function(BuildContext context, Size previewSize);
 
-enum CameraState {
+enum CameraStatus {
   init,
   rebuild,
   dispose,
@@ -105,7 +105,7 @@ class _CameraViewState extends State<CameraView>
 
   DataVideoCamera _dataVideoCamera = const DataVideoCamera();
 
-  CameraState _state = CameraState.init;
+  CameraStatus _status = CameraStatus.init;
 
   @override
   void initState() {
@@ -127,10 +127,10 @@ class _CameraViewState extends State<CameraView>
       return;
     }
 
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed && _status == CameraStatus.rebuild) {
       _initCameras(description: cameraController.description);
     } else if (state == AppLifecycleState.inactive) {
-      _state = CameraState.rebuild;
+      _status = CameraStatus.rebuild;
       cameraController.dispose();
     }
   }
@@ -139,7 +139,7 @@ class _CameraViewState extends State<CameraView>
   void dispose() {
     SystemChrome.setPreferredOrientations([]);
     WidgetsBinding.instance.removeObserver(this);
-    _state = CameraState.dispose;
+    _status = CameraStatus.dispose;
     _controller?.dispose();
     _currentExposure.dispose();
     _currentScale.dispose();
@@ -289,11 +289,12 @@ class _CameraViewState extends State<CameraView>
       });
     }
 
-    if (_state == CameraState.dispose) {
-      debugPrint("CONTROLLER IS DISPOSED");
+    if (_status == CameraStatus.dispose) {
+      debugPrint("controller is disposed");
       return;
     }
 
+    _status = CameraStatus.init;
     _description = description ?? _initCameraDescription();
     if (_validFlashMode.isEmpty) _availableFlashModes();
 
@@ -317,7 +318,7 @@ class _CameraViewState extends State<CameraView>
 
       if (cameraController.value.hasError) {
         debugPrint(
-          'INIT CAMERA ERROR ${cameraController.value.errorDescription}',
+          'camera error ${cameraController.value.errorDescription}',
         );
       }
     });
@@ -325,39 +326,60 @@ class _CameraViewState extends State<CameraView>
     try {
       await cameraController.initialize();
       if (cameraController.value.isInitialized) {
-        _state = CameraState.init;
         widget.onSwitchCamera?.call(_description);
       }
 
       if (!mounted) return;
-
       await Future.wait([
-        cameraController.getMaxExposureOffset().then((value) {
-          _maxAvailableExposureOffset = value;
+        methodWrapper<double>(
+          "getMaxExposureOffset",
+          controller: cameraController,
+          callback: (controller) => controller.getMaxExposureOffset(),
+          fallback: _maxAvailableExposureOffset,
+        ).then((value) {
+          _maxAvailableExposureOffset = value!;
         }),
-        cameraController.getMinExposureOffset().then((value) {
-          _minAvailableExposureOffset = value;
+        methodWrapper<double>(
+          "getMinExposureOffset",
+          controller: cameraController,
+          callback: (controller) => controller.getMinExposureOffset(),
+          fallback: _minAvailableExposureOffset,
+        ).then((value) {
+          _minAvailableExposureOffset = value!;
         }),
-        cameraController.getMinZoomLevel().then((value) {
-          _minAvailableZoom = value;
+        methodWrapper<double>(
+          "getMinZoomLevel",
+          controller: cameraController,
+          callback: (controller) => controller.getMinZoomLevel(),
+          fallback: _minAvailableZoom,
+        ).then((value) {
+          _minAvailableZoom = value!;
         }),
-        cameraController.getMaxZoomLevel().then((value) {
-          _maxAvailableZoom = value;
+        methodWrapper<double>(
+          "getMaxZoomLevel",
+          controller: cameraController,
+          callback: (controller) => controller.getMaxZoomLevel(),
+          fallback: _maxAvailableZoom,
+        ).then((value) {
+          _maxAvailableZoom = value!;
         }),
       ], eagerError: true);
+
+      if (widget.mode == CameraMode.videoRecord) {
+        methodWrapper(
+          "prepareVideoRecording",
+          controller: cameraController,
+          callback: (controller) => controller.prepareForVideoRecording(),
+        );
+      }
 
       if (widget.mode == CameraMode.scanBarcode) {
         _minProcessInterval = Duration(
           milliseconds: (1000 / widget.targetStreamFPS).round(),
         );
 
-        cameraController.startImageStream((image) {
-          _streamImage(image, cameraController);
-        });
+        cameraController.startImageStream(_streamImage);
       }
-    } on CameraException catch (e) {
-      debugPrint(e.toString());
-      rethrow;
     } on Exception catch (e) {
       debugPrint(e.toString());
       rethrow;
@@ -375,8 +397,7 @@ class _CameraViewState extends State<CameraView>
     for (final mode in CameraMode.values) {
       List<FlashMode> flashMode = switch (mode) {
         CameraMode.takePicture => FlashMode.values,
-        CameraMode.scanBarcode => [FlashMode.off, FlashMode.torch],
-        CameraMode.videoRecord => [FlashMode.off, FlashMode.torch],
+        _ => [FlashMode.off, FlashMode.torch],
       };
 
       _validFlashMode.addAll({mode: flashMode});
@@ -385,14 +406,13 @@ class _CameraViewState extends State<CameraView>
 
   Future<void> _streamImage(
     CameraImage image,
-    CameraController controller,
   ) async {
     if (!_shouldSkipProcessing()) {
       _dataStreamCamera = _dataStreamCamera.copyWith(
         image: image,
-        deviceOrientation: controller.value.deviceOrientation,
-        lensDirection: controller.description.lensDirection,
-        sensorOrientation: controller.description.sensorOrientation,
+        deviceOrientation: _controller?.value.deviceOrientation,
+        lensDirection: _controller?.description.lensDirection,
+        sensorOrientation: _controller?.description.sensorOrientation,
       );
       widget.onStreamCamera?.call(_dataStreamCamera);
     }
@@ -411,13 +431,12 @@ class _CameraViewState extends State<CameraView>
   }
 
   Future<void> _handleTakePicture() async {
-    await callbackWrapper<void>(
-      "TAKE PICTURE",
-      isDisposed: _state == CameraState.dispose,
+    String tag = "takePicture";
+    await methodWrapper<void>(
+      tag,
       controller: _controller,
       callback: (controller) async {
         if (controller.value.isTakingPicture) return;
-
         final imageFile = await controller.takePicture();
         _dataTakeCamera = _dataTakeCamera.copyWith(
           imageFile: File(imageFile.path),
@@ -425,31 +444,27 @@ class _CameraViewState extends State<CameraView>
 
         widget.onTakePicture?.call(_dataTakeCamera);
       },
-      onError: (e) {
-        _showErrorMessage(e.toString());
-      },
-    );
+    ).onError((e, stackTrace) {
+      _showErrorMessage(e.toString());
+    });
   }
 
   Future<void> _handleStartRecording() async {
-    await callbackWrapper<void>(
-      "START RECORDING VIDEO",
-      isDisposed: _state == CameraState.dispose,
+    await methodWrapper<void>(
+      "startRecordingVideo",
       controller: _controller,
       callback: (controller) async {
         if (controller.value.isRecordingVideo) return;
         await controller.startVideoRecording();
       },
-      onError: (e) {
-        _showErrorMessage(e.toString());
-      },
-    );
+    ).onError((e, stackTrace) {
+      _showErrorMessage(e.toString());
+    });
   }
 
   Future<void> _handleStopRecording() async {
-    await callbackWrapper<void>(
-      "STOP RECORDING VIDEO",
-      isDisposed: _state == CameraState.dispose,
+    await methodWrapper<void>(
+      "stopRecordingVideo",
       controller: _controller,
       callback: (controller) async {
         if (!controller.value.isRecordingVideo) return;
@@ -460,10 +475,9 @@ class _CameraViewState extends State<CameraView>
 
         widget.onRecordVideo?.call(_dataVideoCamera);
       },
-      onError: (e) {
-        _showErrorMessage(e.toString());
-      },
-    );
+    ).onError((e, stackTrace) {
+      _showErrorMessage(e.toString());
+    });
   }
 
   Future<void> _handleZoom(double scale) async {
@@ -475,18 +489,16 @@ class _CameraViewState extends State<CameraView>
 
     if (zoom == _currentScale.value) return;
 
-    await callbackWrapper<void>(
-      "SET ZOOM LEVEL",
-      isDisposed: _state == CameraState.dispose,
+    await methodWrapper<void>(
+      "setZoomLevel",
       controller: _controller,
       callback: (controller) async {
         await controller.setZoomLevel(zoom);
         _currentScale.value = zoom;
       },
-      onError: (e) {
-        _showErrorMessage(e.toString());
-      },
-    );
+    ).onError((e, stackTrace) {
+      _showErrorMessage(e.toString());
+    });
   }
 
   void _handleScaleStart(ScaleStartDetails details) {
@@ -499,9 +511,8 @@ class _CameraViewState extends State<CameraView>
   }
 
   Future<void> _handleFocus(Offset offset) async {
-    await callbackWrapper(
-      "SET FOCUS POINT",
-      isDisposed: _state == CameraState.dispose,
+    await methodWrapper(
+      "setFocusPoint",
       controller: _controller,
       callback: (controller) async {
         _focusOffset.value = offset;
@@ -517,10 +528,9 @@ class _CameraViewState extends State<CameraView>
           () => _focusOffset.value = null,
         );
       },
-      onError: (e) {
-        _showErrorMessage(e.toString());
-      },
-    );
+    ).onError((e, stackTrace) {
+      _showErrorMessage(e.toString());
+    });
   }
 
   Future<void> _onViewFinderTap(
@@ -538,9 +548,8 @@ class _CameraViewState extends State<CameraView>
   }
 
   Future<void> _handleSwitchCamera(CameraLensDirection? direction) async {
-    await callbackWrapper(
-      "SWITCH CAMERA",
-      isDisposed: _state == CameraState.dispose,
+    await methodWrapper(
+      "switchCamera",
       controller: _controller,
       callback: (controller) async {
         final description = _cameras.firstWhereOrNull(
@@ -549,27 +558,24 @@ class _CameraViewState extends State<CameraView>
 
         await _initCameras(description: description);
       },
-      onError: (e) {
-        _showErrorMessage(e.toString());
-      },
-    );
+    ).onError((e, stackTrace) {
+      _showErrorMessage(e.toString());
+    });
   }
 
   Future<void> _handleSwitchFlashMode(FlashMode? flashMode) async {
     if (flashMode == null) return;
-    await callbackWrapper(
-      "SWITCH FLASH MODE",
-      isDisposed: _state == CameraState.dispose,
+    await methodWrapper(
+      "switchFlashMode",
       controller: _controller,
       callback: (controller) async {
         await controller.setFlashMode(flashMode);
         _flashMode = flashMode;
         widget.onSwitchFlash?.call(_flashMode);
       },
-      onError: (e) {
-        _showErrorMessage(e.toString());
-      },
-    );
+    ).onError((e, stackTrace) {
+      _showErrorMessage(e.toString());
+    });
   }
 
   Future<void> _showErrorMessage(String message) async {
