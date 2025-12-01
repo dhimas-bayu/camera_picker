@@ -423,7 +423,7 @@ class ImageUtils {
 
       final timestamp = DateTime.timestamp().millisecondsSinceEpoch;
       Directory appDocDir = await getApplicationDocumentsDirectory();
-      String fileName = 'cropped_image_$timestamp.$format';
+      String fileName = 'photo_$timestamp.$format';
       String filePath = '${appDocDir.path}/$fileName';
 
       final file = File(filePath);
