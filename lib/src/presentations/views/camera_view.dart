@@ -11,7 +11,6 @@ import 'package:flutter/services.dart';
 import '../../../camera_picker.dart';
 import '../../core/models/data_stream_camera.dart';
 import '../../core/models/data_take_camera.dart';
-import '../../core/utils/method_wrapper.dart';
 import '../widgets/camera_switcher.dart';
 import '../widgets/capture_button.dart';
 import '../widgets/flash_mode_switcher.dart';
@@ -278,6 +277,26 @@ class _CameraViewState extends State<CameraView>
     );
   }
 
+  Future<T?> _methodWrapper<T>(
+    String tag, {
+    Future<T?> Function()? method,
+    T? fallback,
+  }) async {
+    if (_controller == null || !_controller!.value.isInitialized) {
+      return fallback;
+    }
+
+    try {
+      if (!mounted) {
+        return fallback;
+      }
+
+      return await method?.call();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> _initCameras({
     CameraDescription? description,
   }) async {
@@ -331,34 +350,30 @@ class _CameraViewState extends State<CameraView>
 
       if (!mounted) return;
       await Future.wait([
-        methodWrapper<double>(
+        _methodWrapper<double>(
           "getMaxExposureOffset",
-          controller: cameraController,
-          callback: (controller) => controller.getMaxExposureOffset(),
+          method: () => cameraController.getMaxExposureOffset(),
           fallback: _maxAvailableExposureOffset,
         ).then((value) {
           _maxAvailableExposureOffset = value!;
         }),
-        methodWrapper<double>(
+        _methodWrapper<double>(
           "getMinExposureOffset",
-          controller: cameraController,
-          callback: (controller) => controller.getMinExposureOffset(),
+          method: () => cameraController.getMinExposureOffset(),
           fallback: _minAvailableExposureOffset,
         ).then((value) {
           _minAvailableExposureOffset = value!;
         }),
-        methodWrapper<double>(
+        _methodWrapper<double>(
           "getMinZoomLevel",
-          controller: cameraController,
-          callback: (controller) => controller.getMinZoomLevel(),
+          method: () => cameraController.getMinZoomLevel(),
           fallback: _minAvailableZoom,
         ).then((value) {
           _minAvailableZoom = value!;
         }),
-        methodWrapper<double>(
+        _methodWrapper<double>(
           "getMaxZoomLevel",
-          controller: cameraController,
-          callback: (controller) => controller.getMaxZoomLevel(),
+          method: () => cameraController.getMaxZoomLevel(),
           fallback: _maxAvailableZoom,
         ).then((value) {
           _maxAvailableZoom = value!;
@@ -366,16 +381,20 @@ class _CameraViewState extends State<CameraView>
       ], eagerError: true);
 
       if (widget.mode == CameraMode.videoRecord) {
-        methodWrapper(
+        _methodWrapper<void>(
           "prepareVideoRecording",
-          controller: cameraController,
-          callback: (controller) => controller.prepareForVideoRecording(),
+          method: () => cameraController.prepareForVideoRecording(),
         );
       }
 
       if (widget.mode == CameraMode.scanBarcode) {
         _minProcessInterval = Duration(
           milliseconds: (1000 / widget.targetStreamFPS).round(),
+        );
+
+        _methodWrapper<void>(
+          "prepareVideoRecording",
+          method: () => cameraController.prepareForVideoRecording(),
         );
 
         cameraController.startImageStream(_streamImage);
@@ -432,12 +451,11 @@ class _CameraViewState extends State<CameraView>
 
   Future<void> _handleTakePicture() async {
     String tag = "takePicture";
-    await methodWrapper<void>(
+    await _methodWrapper<void>(
       tag,
-      controller: _controller,
-      callback: (controller) async {
-        if (controller.value.isTakingPicture) return;
-        final imageFile = await controller.takePicture();
+      method: () async {
+        if (_controller!.value.isTakingPicture) return;
+        final imageFile = await _controller!.takePicture();
         _dataTakeCamera = _dataTakeCamera.copyWith(
           imageFile: File(imageFile.path),
         );
@@ -450,12 +468,11 @@ class _CameraViewState extends State<CameraView>
   }
 
   Future<void> _handleStartRecording() async {
-    await methodWrapper<void>(
+    await _methodWrapper<void>(
       "startRecordingVideo",
-      controller: _controller,
-      callback: (controller) async {
-        if (controller.value.isRecordingVideo) return;
-        await controller.startVideoRecording();
+      method: () async {
+        if (_controller!.value.isRecordingVideo) return;
+        await _controller!.startVideoRecording();
       },
     ).onError((e, stackTrace) {
       _showErrorMessage(e.toString());
@@ -463,12 +480,11 @@ class _CameraViewState extends State<CameraView>
   }
 
   Future<void> _handleStopRecording() async {
-    await methodWrapper<void>(
+    await _methodWrapper<void>(
       "stopRecordingVideo",
-      controller: _controller,
-      callback: (controller) async {
-        if (!controller.value.isRecordingVideo) return;
-        final videoFile = await controller.stopVideoRecording();
+      method: () async {
+        if (!_controller!.value.isRecordingVideo) return;
+        final videoFile = await _controller!.stopVideoRecording();
         _dataVideoCamera = _dataVideoCamera.copyWith(
           videoFile: File(videoFile.path),
         );
@@ -489,11 +505,10 @@ class _CameraViewState extends State<CameraView>
 
     if (zoom == _currentScale.value) return;
 
-    await methodWrapper<void>(
+    await _methodWrapper<void>(
       "setZoomLevel",
-      controller: _controller,
-      callback: (controller) async {
-        await controller.setZoomLevel(zoom);
+      method: () async {
+        await _controller!.setZoomLevel(zoom);
         _currentScale.value = zoom;
       },
     ).onError((e, stackTrace) {
@@ -511,17 +526,16 @@ class _CameraViewState extends State<CameraView>
   }
 
   Future<void> _handleFocus(Offset offset) async {
-    await methodWrapper(
+    await _methodWrapper<void>(
       "setFocusPoint",
-      controller: _controller,
-      callback: (controller) async {
+      method: () async {
         _focusOffset.value = offset;
 
         await Future.wait([
-          controller.setFocusMode(FocusMode.locked),
-          controller.setFocusPoint(offset),
-          controller.setExposurePoint(offset),
-        ]);
+          _controller!.setFocusMode(FocusMode.locked),
+          _controller!.setFocusPoint(offset),
+          _controller!.setExposurePoint(offset),
+        ], eagerError: true);
 
         Future.delayed(
           const Duration(seconds: 1),
@@ -548,10 +562,9 @@ class _CameraViewState extends State<CameraView>
   }
 
   Future<void> _handleSwitchCamera(CameraLensDirection? direction) async {
-    await methodWrapper(
+    await _methodWrapper(
       "switchCamera",
-      controller: _controller,
-      callback: (controller) async {
+      method: () async {
         final description = _cameras.firstWhereOrNull(
           (d) => d.lensDirection == direction,
         );
@@ -565,11 +578,10 @@ class _CameraViewState extends State<CameraView>
 
   Future<void> _handleSwitchFlashMode(FlashMode? flashMode) async {
     if (flashMode == null) return;
-    await methodWrapper(
+    await _methodWrapper(
       "switchFlashMode",
-      controller: _controller,
-      callback: (controller) async {
-        await controller.setFlashMode(flashMode);
+      method: () async {
+        await _controller!.setFlashMode(flashMode);
         _flashMode = flashMode;
         widget.onSwitchFlash?.call(_flashMode);
       },
