@@ -344,11 +344,10 @@ class _CameraViewState extends State<CameraView>
 
     try {
       await cameraController.initialize();
-      if (cameraController.value.isInitialized) {
+      if (mounted && cameraController.value.isInitialized) {
         widget.onSwitchCamera?.call(_description);
       }
 
-      if (!mounted) return;
       await Future.wait([
         _methodWrapper<double>(
           "getMaxExposureOffset",
@@ -399,8 +398,11 @@ class _CameraViewState extends State<CameraView>
 
         cameraController.startImageStream(_streamImage);
       }
+    } on CameraException catch (e) {
+      debugPrint("CameraException: $e");
+      rethrow;
     } on Exception catch (e) {
-      debugPrint(e.toString());
+      debugPrint("Exception: $e");
       rethrow;
     }
   }

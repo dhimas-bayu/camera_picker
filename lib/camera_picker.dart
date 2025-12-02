@@ -20,7 +20,7 @@ export 'src/core/models/overlay_size.dart';
 
 enum CameraMode { takePicture, scanBarcode, videoRecord }
 
-class CameraPicker extends StatelessWidget {
+class CameraPicker extends StatefulWidget {
   const CameraPicker._({
     required this.action,
     required this.config,
@@ -71,70 +71,69 @@ class CameraPicker extends StatelessWidget {
   }
 
   @override
+  State<CameraPicker> createState() => _CameraPickerState();
+}
+
+class _CameraPickerState extends State<CameraPicker> {
+  bool _isGranted = false;
+  List<CameraDescription> _cameras = [];
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => _initCamera());
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: FutureBuilder(
-        future: _checkPermissions(),
-        builder: (context, asyncSnapshot) {
-          if (asyncSnapshot.connectionState != ConnectionState.done) {
-            return const SizedBox.shrink();
-          }
-
-          final isGranted = asyncSnapshot.data ?? false;
-          if (!isGranted) {
-            return const PermissionView();
-          }
-
-          return FutureBuilder(
-            future: availableCameras(),
-            builder: (context, asyncSnapshot) {
-              if (asyncSnapshot.connectionState != ConnectionState.done) {
-                return const SizedBox.shrink();
-              }
-
-              final cameras = asyncSnapshot.data ?? <CameraDescription>[];
-              switch (action) {
-                case CameraMode.takePicture:
-                  return ImageCaptureView(
-                    cameras: cameras,
-                    config: config as CameraPickerConfig,
-                    onTakePicture: (file) {
-                      Navigator.pop(context, file);
-                    },
-                  );
-                case CameraMode.scanBarcode:
-                  return BarcodeScannerView(
-                    cameras: cameras,
-                    config: config as CameraScannerConfig,
-                    onBarcodeScanned: (value) {
-                      Navigator.pop(context, value);
-                    },
-                  );
-                case CameraMode.videoRecord:
-                  return VideoRecordView(
-                    cameras: cameras,
-                    config: config as CameraVideoConfig,
-                    onRecorded: (file) {
-                      Navigator.pop(context, file);
-                    },
-                  );
-              }
+      body: !_isGranted
+          ? const PermissionView()
+          : switch (widget.action) {
+              CameraMode.takePicture => ImageCaptureView(
+                cameras: _cameras,
+                config: widget.config as CameraPickerConfig,
+                onTakePicture: (file) {
+                  Navigator.pop(context, file);
+                },
+              ),
+              CameraMode.scanBarcode => BarcodeScannerView(
+                cameras: _cameras,
+                config: widget.config as CameraScannerConfig,
+                onBarcodeScanned: (value) {
+                  Navigator.pop(context, value);
+                },
+              ),
+              CameraMode.videoRecord => VideoRecordView(
+                cameras: _cameras,
+                config: widget.config as CameraVideoConfig,
+                onRecorded: (file) {
+                  Navigator.pop(context, file);
+                },
+              ),
             },
-          );
-        },
-      ),
     );
   }
 
-  Future<bool> _checkPermissions() async {
+  Future<void> _initCamera() async {
+    await _checkPermissions();
+    await _checkAvailableCameras();
+  }
+
+  Future<void> _checkPermissions() async {
     final statuses = await [
       Permission.camera,
       Permission.microphone,
     ].request();
 
-    return statuses.values.every((status) {
+    _isGranted = statuses.values.every((status) {
       return status == PermissionStatus.granted;
     });
+  }
+
+  Future<void> _checkAvailableCameras() async {
+    final cameras = await availableCameras();
+    _cameras = cameras;
   }
 }
