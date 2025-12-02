@@ -114,9 +114,12 @@ class _CameraViewState extends State<CameraView>
       DeviceOrientation.portraitDown,
     ]);
 
-    WidgetsBinding.instance.addObserver(this);
     _flashMode = widget.initFlashMode;
-    _initCameras(description: widget.initCamera);
+    WidgetsBinding.instance
+      ..addObserver(this)
+      ..addPostFrameCallback((_) {
+        _initCameras(description: widget.initCamera);
+      });
   }
 
   @override
