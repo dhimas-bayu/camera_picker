@@ -7,23 +7,33 @@ class PermissionView extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        return SizedBox.fromSize(
-          size: constraints.biggest,
+        return Container(
+          height: constraints.biggest.height,
+          width: constraints.biggest.width,
+          color: Colors.black,
+          padding: const EdgeInsets.all(24.0),
           child: const Column(
-            spacing: 4.0,
+            spacing: 8.0,
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(Icons.cancel_outlined, size: 64.0, color: Colors.white),
+              Icon(
+                Icons.perm_camera_mic_rounded,
+                size: 56.0,
+                color: Colors.white,
+              ),
               Text(
-                "Camera permission required, Please enabled it in settings.",
+                "Camera permission required, Please allow camera permissions.",
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12.0, color: Colors.white),
+                style: TextStyle(
+                  fontSize: 14.0,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
         );
-      }
+      },
     );
   }
 }

@@ -19,13 +19,14 @@ typedef PreviewBuilder =
     Widget Function(BuildContext context, Size previewSize);
 
 enum CameraStatus {
-  init,
-  rebuild,
-  dispose,
+  initialized,
+  active,
+  idle,
+  disposed,
 }
 
 class CameraView extends StatefulWidget {
-  CameraView({
+  const CameraView({
     super.key,
     required this.cameras,
     required this.resolutionPreset,
@@ -104,7 +105,7 @@ class _CameraViewState extends State<CameraView>
 
   DataVideoCamera _dataVideoCamera = const DataVideoCamera();
 
-  CameraStatus _status = CameraStatus.init;
+  CameraStatus _status = CameraStatus.initialized;
 
   @override
   void initState() {
@@ -115,11 +116,8 @@ class _CameraViewState extends State<CameraView>
     ]);
 
     _flashMode = widget.initFlashMode;
-    WidgetsBinding.instance
-      ..addObserver(this)
-      ..addPostFrameCallback((_) {
-        _initCameras(description: widget.initCamera);
-      });
+    WidgetsBinding.instance.addObserver(this);
+    _initCameras(description: widget.initCamera);
   }
 
   @override
@@ -129,10 +127,10 @@ class _CameraViewState extends State<CameraView>
       return;
     }
 
-    if (state == AppLifecycleState.resumed && _status == CameraStatus.rebuild) {
+    if (state == AppLifecycleState.resumed && _status == CameraStatus.idle) {
       _initCameras(description: cameraController.description);
     } else if (state == AppLifecycleState.inactive) {
-      _status = CameraStatus.rebuild;
+      _status = CameraStatus.idle;
       cameraController.dispose();
     }
   }
@@ -141,12 +139,13 @@ class _CameraViewState extends State<CameraView>
   void dispose() {
     SystemChrome.setPreferredOrientations([]);
     WidgetsBinding.instance.removeObserver(this);
-    _status = CameraStatus.dispose;
-    _controller?.dispose();
+    _status = CameraStatus.disposed;
+    final cameraController = _controller;
+    cameraController?.dispose();
+    _controller = null;
     _currentExposure.dispose();
     _currentScale.dispose();
     _focusOffset.dispose();
-    _controller = null;
     super.dispose();
   }
 
@@ -311,12 +310,20 @@ class _CameraViewState extends State<CameraView>
       });
     }
 
-    if (_status == CameraStatus.dispose) {
+    if (_status == CameraStatus.disposed) {
       debugPrint("Camera is disposed");
       return;
     }
 
-    _status = CameraStatus.init;
+    if (_status == CameraStatus.initialized) {
+      final controller = _controller;
+
+      if (controller != null) {
+        await controller.dispose();
+        _controller = null;
+      }
+    }
+
     _description = description ?? _initCameraDescription();
     if (_validFlashMode.isEmpty) _availableFlashModes();
 
@@ -334,6 +341,8 @@ class _CameraViewState extends State<CameraView>
 
     _controller = cameraController;
     cameraController.addListener(() {
+      if (!mounted) return;
+
       if (cameraController.value.hasError) {
         debugPrint(
           'camera error ${cameraController.value.errorDescription}',
@@ -345,6 +354,8 @@ class _CameraViewState extends State<CameraView>
       await cameraController.initialize();
       if (mounted && cameraController.value.isInitialized) {
         setState(() {});
+
+        _status = CameraStatus.active;
         widget.onSwitchCamera?.call(_description);
       }
 
@@ -356,6 +367,7 @@ class _CameraViewState extends State<CameraView>
         ).then((value) {
           _maxAvailableExposureOffset = value!;
         }),
+
         _methodWrapper<double>(
           "getMinExposureOffset",
           method: () => cameraController.getMinExposureOffset(),
@@ -363,6 +375,7 @@ class _CameraViewState extends State<CameraView>
         ).then((value) {
           _minAvailableExposureOffset = value!;
         }),
+
         _methodWrapper<double>(
           "getMinZoomLevel",
           method: () => cameraController.getMinZoomLevel(),
@@ -370,6 +383,7 @@ class _CameraViewState extends State<CameraView>
         ).then((value) {
           _minAvailableZoom = value!;
         }),
+
         _methodWrapper<double>(
           "getMaxZoomLevel",
           method: () => cameraController.getMaxZoomLevel(),

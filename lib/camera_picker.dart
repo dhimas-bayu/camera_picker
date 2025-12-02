@@ -89,31 +89,33 @@ class _CameraPickerState extends State<CameraPicker> {
             return const SizedBox.shrink();
           }
 
-          return !_isGranted
-              ? const PermissionView()
-              : switch (widget.action) {
-                  CameraMode.takePicture => ImageCaptureView(
-                    cameras: _cameras,
-                    config: widget.config as CameraPickerConfig,
-                    onTakePicture: (file) {
-                      Navigator.pop(context, file);
-                    },
-                  ),
-                  CameraMode.scanBarcode => BarcodeScannerView(
-                    cameras: _cameras,
-                    config: widget.config as CameraScannerConfig,
-                    onBarcodeScanned: (value) {
-                      Navigator.pop(context, value);
-                    },
-                  ),
-                  CameraMode.videoRecord => VideoRecordView(
-                    cameras: _cameras,
-                    config: widget.config as CameraVideoConfig,
-                    onRecorded: (file) {
-                      Navigator.pop(context, file);
-                    },
-                  ),
-                };
+          if (!_isGranted) {
+            return const PermissionView();
+          }
+
+          return switch (widget.action) {
+            CameraMode.takePicture => ImageCaptureView(
+              cameras: _cameras,
+              config: widget.config as CameraPickerConfig,
+              onTakePicture: (file) {
+                Navigator.pop(context, file);
+              },
+            ),
+            CameraMode.scanBarcode => BarcodeScannerView(
+              cameras: _cameras,
+              config: widget.config as CameraScannerConfig,
+              onBarcodeScanned: (value) {
+                Navigator.pop(context, value);
+              },
+            ),
+            CameraMode.videoRecord => VideoRecordView(
+              cameras: _cameras,
+              config: widget.config as CameraVideoConfig,
+              onRecorded: (file) {
+                Navigator.pop(context, file);
+              },
+            ),
+          };
         },
       ),
     );
