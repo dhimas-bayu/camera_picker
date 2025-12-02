@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:camera_picker/src/presentations/views/error_view.dart';
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import 'src/core/models/camera_config.dart';
 import 'src/presentations/views/barcode_scanner/barcode_scanner_view.dart';
@@ -121,20 +120,5 @@ class _CameraPickerState extends State<CameraPicker> {
         },
       ),
     );
-  }
-
-  Future<bool> checkPermissions() async {
-    try {
-      final statuses = await [
-        Permission.camera,
-        Permission.microphone,
-      ].request();
-
-      return statuses.values.every((status) {
-        return status.isGranted;
-      });
-    } catch (e) {
-      rethrow;
-    }
   }
 }
