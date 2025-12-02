@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:camera/camera.dart';
-import 'package:camera_picker/src/presentations/views/permission_view.dart';
+import 'package:camera_picker/src/presentations/views/error_view.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -75,69 +75,66 @@ class CameraPicker extends StatefulWidget {
 }
 
 class _CameraPickerState extends State<CameraPicker> {
-  bool _isGranted = false;
-  List<CameraDescription> _cameras = [];
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: FutureBuilder(
-        future: _initCamera(),
+        future: availableCameras(),
         builder: (context, asyncSnapshot) {
-          if (asyncSnapshot.connectionState != ConnectionState.done) {
-            return const SizedBox.shrink();
+          if (asyncSnapshot.hasError) {
+            return ErrorCameraView(
+              errorMessage: '${asyncSnapshot.error}',
+            );
           }
 
-          if (!_isGranted) {
-            return const PermissionView();
+          if (asyncSnapshot.hasData) {
+            final cameras = asyncSnapshot.data;
+            if (cameras != null && cameras.isNotEmpty) {
+              return switch (widget.action) {
+                CameraMode.takePicture => ImageCaptureView(
+                  cameras: cameras,
+                  config: widget.config as CameraPickerConfig,
+                  onTakePicture: (file) {
+                    Navigator.pop(context, file);
+                  },
+                ),
+                CameraMode.scanBarcode => BarcodeScannerView(
+                  cameras: cameras,
+                  config: widget.config as CameraScannerConfig,
+                  onBarcodeScanned: (value) {
+                    Navigator.pop(context, value);
+                  },
+                ),
+                CameraMode.videoRecord => VideoRecordView(
+                  cameras: cameras,
+                  config: widget.config as CameraVideoConfig,
+                  onRecorded: (file) {
+                    Navigator.pop(context, file);
+                  },
+                ),
+              };
+            }
           }
 
-          return switch (widget.action) {
-            CameraMode.takePicture => ImageCaptureView(
-              cameras: _cameras,
-              config: widget.config as CameraPickerConfig,
-              onTakePicture: (file) {
-                Navigator.pop(context, file);
-              },
-            ),
-            CameraMode.scanBarcode => BarcodeScannerView(
-              cameras: _cameras,
-              config: widget.config as CameraScannerConfig,
-              onBarcodeScanned: (value) {
-                Navigator.pop(context, value);
-              },
-            ),
-            CameraMode.videoRecord => VideoRecordView(
-              cameras: _cameras,
-              config: widget.config as CameraVideoConfig,
-              onRecorded: (file) {
-                Navigator.pop(context, file);
-              },
-            ),
-          };
+          return const SizedBox.shrink();
         },
       ),
     );
   }
 
-  Future<void> _initCamera() async {
-    await _checkPermissions();
-    await _checkAvailableCameras();
-  }
+  Future<bool> checkPermissions() async {
+    try {
+      final statuses = await [
+        Permission.camera,
+        Permission.microphone,
+      ].request();
 
-  Future<void> _checkPermissions() async {
-    final statuses = await [
-      Permission.camera,
-      Permission.microphone,
-    ].request();
-
-    _isGranted = statuses.values.every((status) {
-      return status == PermissionStatus.granted;
-    });
-  }
-
-  Future<void> _checkAvailableCameras() async {
-    _cameras = await availableCameras();
+      return statuses.values.every((status) {
+        return status.isGranted;
+      });
+    } catch (e) {
+      rethrow;
+    }
   }
 }
