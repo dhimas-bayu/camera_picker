@@ -312,7 +312,7 @@ class _CameraViewState extends State<CameraView>
     }
 
     if (_status == CameraStatus.dispose) {
-      debugPrint("controller is disposed");
+      debugPrint("Camera is disposed");
       return;
     }
 
@@ -334,10 +334,6 @@ class _CameraViewState extends State<CameraView>
 
     _controller = cameraController;
     cameraController.addListener(() {
-      if (mounted) {
-        setState(() {});
-      }
-
       if (cameraController.value.hasError) {
         debugPrint(
           'camera error ${cameraController.value.errorDescription}',
@@ -348,6 +344,7 @@ class _CameraViewState extends State<CameraView>
     try {
       await cameraController.initialize();
       if (mounted && cameraController.value.isInitialized) {
+        setState(() {});
         widget.onSwitchCamera?.call(_description);
       }
 
