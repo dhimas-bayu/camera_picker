@@ -1,6 +1,6 @@
 name: camera_picker
 description: "Camera picker package."
-version: 1.0.4 
+version: 1.0.4+1
 homepage: https://github.com/dhimas-bayu/camera_picker
 
 environment:
