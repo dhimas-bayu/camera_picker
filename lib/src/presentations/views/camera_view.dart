@@ -139,9 +139,10 @@ class _CameraViewState extends State<CameraView>
   void dispose() {
     SystemChrome.setPreferredOrientations([]);
     WidgetsBinding.instance.removeObserver(this);
-    _status = CameraStatus.disposed;
     final cameraController = _controller;
-    cameraController?.dispose();
+    unawaited(cameraController?.dispose());
+
+    _status = CameraStatus.disposed;
     _controller = null;
     _currentExposure.dispose();
     _currentScale.dispose();
@@ -184,6 +185,7 @@ class _CameraViewState extends State<CameraView>
                     return _onViewFinderTap(details, constraints);
                   },
                 ),
+
                 ?widget.onPreviewBuilder?.call(
                   context,
                   constraints.biggest,

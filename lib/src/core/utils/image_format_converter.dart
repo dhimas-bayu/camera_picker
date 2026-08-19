@@ -18,21 +18,21 @@ class ImageFormatConverter {
   }) async {
     try {
       if (image.format.group == ImageFormatGroup.yuv420) {
-        return _convertYUV420ToInputImage(
+        return await _convertYUV420ToInputImage(
           image,
           deviceOrientation: deviceOrientation,
           lensDirection: lensDirection,
           sensorOrientation: sensorOrientation,
         );
       } else if (image.format.group == ImageFormatGroup.nv21) {
-        return _convertNV21ToInputImage(
+        return await _convertNV21ToInputImage(
           image,
           deviceOrientation: deviceOrientation,
           lensDirection: lensDirection,
           sensorOrientation: sensorOrientation,
         );
       } else if (image.format.group == ImageFormatGroup.bgra8888) {
-        return _convertBGRA8888ToInputImage(
+        return await _convertBGRA8888ToInputImage(
           image,
           deviceOrientation: deviceOrientation,
           lensDirection: lensDirection,
