@@ -8,7 +8,7 @@ class DataTakeCamera extends Equatable {
   const DataTakeCamera({this.imageFile});
 
   DataTakeCamera copyWith({
-    final File? imageFile,
+    File? imageFile,
   }) => DataTakeCamera(
     imageFile: imageFile ?? this.imageFile,
   );
