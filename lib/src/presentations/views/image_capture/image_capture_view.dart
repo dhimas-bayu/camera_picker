@@ -88,8 +88,9 @@ class _ImageCaptureViewState extends State<ImageCaptureView> {
     final shouldCrop =
         config.autoCropping && _boundingBox != null && _layoutSize != null;
     final shouldCompress = config.quality < 100;
+    final shouldWatermark = config.watermark != null;
 
-    if (!shouldCrop && !shouldCompress) {
+    if (!shouldCrop && !shouldCompress && !shouldWatermark) {
       _imageFile.value = isFront
           ? await ImageUtils.flipHorizontal(imageBytes)
           : resultFile;
@@ -101,6 +102,7 @@ class _ImageCaptureViewState extends State<ImageCaptureView> {
         imageBytes: imageBytes,
         quality: config.quality,
         flippedHorizontal: isFront,
+        watermark: config.watermark,
       );
       return;
     }
@@ -111,18 +113,18 @@ class _ImageCaptureViewState extends State<ImageCaptureView> {
       displaySize: _layoutSize!,
       quality: config.quality,
       flippedHorizontal: isFront,
+      watermark: config.watermark,
     );
   }
 
   Widget _buildOverlay(BuildContext context, Size size) {
-    final showOverlay = widget.config.showOverlay;
-    if (!showOverlay) {
+    if (widget.config.overlaySize == null) {
       return const SizedBox.shrink();
     }
 
     _layoutSize = size;
     final center = Offset(size.width / 2, size.height / 2);
-    final docSize = widget.config.overlaySize ?? OverlaySize.idCard();
+    final docSize = widget.config.overlaySize!;
 
     final overlaySize = docSize.toOverlaySize(size, scaleFactor: .8);
     _boundingBox = Rect.fromCenter(

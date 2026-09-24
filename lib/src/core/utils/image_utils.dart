@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 
+import '../models/watermark.dart';
+
 /// Utility class for image processing operations.
 ///
 /// This class provides various methods for image manipulation including:
@@ -435,21 +437,119 @@ class ImageUtils {
     }
   }
 
+  static img.Image _addWatermark(img.Image originalImage, Watermark watermark) {
+    try {
+      final imgColor = img.ColorRgba8(
+        watermark.color.red,
+        watermark.color.green,
+        watermark.color.blue,
+        watermark.color.alpha,
+      );
+
+      final font = watermark.font ?? img.arial24;
+
+      int textWidth = 0;
+      for (int i = 0; i < watermark.text.length; i++) {
+        final c = watermark.text.codeUnitAt(i);
+        final ch = font.characters[c];
+        if (ch != null) {
+          textWidth += ch.xAdvance.toInt();
+        }
+      }
+
+      String? timestampStr;
+      int timestampWidth = 0;
+      if (watermark.showTimestamp) {
+        timestampStr = DateTime.now().toString().split('.').first;
+        for (int i = 0; i < timestampStr.length; i++) {
+          final c = timestampStr.codeUnitAt(i);
+          final ch = font.characters[c];
+          if (ch != null) {
+            timestampWidth += ch.xAdvance.toInt();
+          }
+        }
+      }
+
+      final int totalWidth = textWidth > timestampWidth ? textWidth : timestampWidth;
+
+      // Use lineHeight or size for text height
+      int textHeight = watermark.showTimestamp ? font.size * 2 + 4 : font.size;
+
+      int x = 0;
+      int y = 0;
+
+      switch (watermark.position) {
+        case WatermarkPosition.topLeft:
+          x = watermark.dstX.toInt();
+          y = watermark.dstY.toInt();
+          break;
+        case WatermarkPosition.topRight:
+          x = originalImage.width - totalWidth - watermark.dstX.toInt();
+          y = watermark.dstY.toInt();
+          break;
+        case WatermarkPosition.bottomLeft:
+          x = watermark.dstX.toInt();
+          y = originalImage.height - textHeight - watermark.dstY.toInt();
+          break;
+        case WatermarkPosition.bottomRight:
+          x = originalImage.width - totalWidth - watermark.dstX.toInt();
+          y = originalImage.height - textHeight - watermark.dstY.toInt();
+          break;
+      }
+
+      bool isRightAligned = watermark.position == WatermarkPosition.topRight || 
+                            watermark.position == WatermarkPosition.bottomRight;
+                            
+      int textX = isRightAligned ? x + (totalWidth - textWidth) : x;
+      
+      img.Image result = img.drawString(
+        originalImage,
+        watermark.text,
+        font: font,
+        x: textX,
+        y: y,
+        color: imgColor,
+      );
+
+      if (watermark.showTimestamp && timestampStr != null) {
+        int timestampX = isRightAligned ? x + (totalWidth - timestampWidth) : x;
+        result = img.drawString(
+          result,
+          timestampStr,
+          font: font,
+          x: timestampX,
+          y: y + font.size + 4,
+          color: imgColor,
+        );
+      }
+
+      return result;
+    } catch (e) {
+      development.log('Error adding watermark: $e');
+      return originalImage;
+    }
+  }
+
   static Future<File?> compressImageToFile({
     required Uint8List imageBytes,
     int quality = 80,
     bool flippedHorizontal = false,
     bool useIsolate = false,
+    Watermark? watermark,
   }) async {
     File? resultFile;
-    final image = await _convertToImage(imageBytes);
+    img.Image? image = await _convertToImage(imageBytes);
     if (image == null) return resultFile;
-    if (flippedHorizontal) {
-      final flippedImage = img.flipHorizontal(image);
-      resultFile = await imageToFile(flippedImage, quality: quality);
-    } else {
-      resultFile = await imageToFile(image, quality: quality);
+
+    if (watermark != null) {
+      image = _addWatermark(image, watermark);
     }
+
+    if (flippedHorizontal) {
+      image = img.flipHorizontal(image);
+    }
+
+    resultFile = await imageToFile(image, quality: quality);
 
     return resultFile;
   }
@@ -462,9 +562,10 @@ class ImageUtils {
     int quality = 80,
     bool flippedHorizontal = false,
     bool useIsolate = false,
+    Watermark? watermark,
   }) async {
     File? resultFile;
-    final image = await cropImageFromScreen(
+    img.Image? image = await cropImageFromScreen(
       pictureBytes: imageBytes,
       screenRect: screenRect,
       displaySize: displaySize,
@@ -473,12 +574,16 @@ class ImageUtils {
     );
 
     if (image == null) return resultFile;
-    if (flippedHorizontal) {
-      final flippedImage = img.flipHorizontal(image);
-      resultFile = await imageToFile(flippedImage, quality: quality);
-    } else {
-      resultFile = await imageToFile(image, quality: quality);
+
+    if (watermark != null) {
+      image = _addWatermark(image, watermark);
     }
+
+    if (flippedHorizontal) {
+      image = img.flipHorizontal(image);
+    }
+
+    resultFile = await imageToFile(image, quality: quality);
 
     return resultFile;
   }

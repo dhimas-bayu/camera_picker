@@ -13,6 +13,23 @@ class TakeImagePage extends StatefulWidget {
 class _TakeImagePageState extends State<TakeImagePage> {
   File? _imageFile;
   String? _imageSize;
+  final TextEditingController _watermarkController = TextEditingController();
+
+  @override
+  void dispose() {
+    _watermarkController.dispose();
+    super.dispose();
+  }
+
+  Watermark? get _watermark {
+    final text = _watermarkController.text.trim();
+    if (text.isEmpty) return null;
+    return Watermark(
+      text: text,
+      showTimestamp: true,
+      position: WatermarkPosition.bottomRight,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +55,21 @@ class _TakeImagePageState extends State<TakeImagePage> {
                   ),
                 ),
 
-                Text("File size : ${_imageSize ?? "-"}"),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text("File size : ${_imageSize ?? "-"}"),
+                ),
+                TextField(
+                  controller: _watermarkController,
+                  decoration: const InputDecoration(
+                    labelText: "Watermark Text",
+                    hintText: "Write something...",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12.0)),
+                    ),
+                    isDense: true,
+                  ),
+                ),
               ],
             ),
           ),
@@ -59,9 +90,9 @@ class _TakeImagePageState extends State<TakeImagePage> {
                     final file = await CameraPicker.takePicture(
                       context,
                       config: CameraPickerConfig(
-                        showOverlay: false,
                         autoCropping: false,
                         quality: 100,
+                        watermark: _watermark,
                       ),
                     );
                     if (file != null) setResult(file);
@@ -82,9 +113,9 @@ class _TakeImagePageState extends State<TakeImagePage> {
                     final file = await CameraPicker.takePicture(
                       context,
                       config: CameraPickerConfig(
-                        showOverlay: false,
                         autoCropping: true,
                         quality: 80,
+                        watermark: _watermark,
                       ),
                     );
                     if (file != null) setResult(file);
@@ -105,10 +136,10 @@ class _TakeImagePageState extends State<TakeImagePage> {
                     final file = await CameraPicker.takePicture(
                       context,
                       config: CameraPickerConfig(
-                        showOverlay: true,
                         overlaySize: OverlaySize.paperA4(),
                         autoCropping: true,
                         quality: 100,
+                        watermark: _watermark,
                       ),
                     );
 
@@ -130,10 +161,10 @@ class _TakeImagePageState extends State<TakeImagePage> {
                     final file = await CameraPicker.takePicture(
                       context,
                       config: CameraPickerConfig(
-                        showOverlay: true,
                         overlaySize: OverlaySize.paperA4(),
                         autoCropping: true,
                         quality: 80,
+                        watermark: _watermark,
                       ),
                     );
 

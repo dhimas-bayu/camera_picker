@@ -16,6 +16,7 @@ export 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart
 export 'src/presentations/painters/camera_overlay_painter.dart';
 export 'src/core/models/camera_config.dart';
 export 'src/core/models/overlay_size.dart';
+export 'src/core/models/watermark.dart';
 
 enum CameraMode { takePicture, scanBarcode, videoRecord }
 

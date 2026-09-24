@@ -1,4 +1,5 @@
 import 'package:camera/camera.dart';
+import 'package:camera_picker/src/core/models/watermark.dart';
 import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
 
 import 'overlay_size.dart';
@@ -6,7 +7,6 @@ import 'overlay_size.dart';
 abstract class Config {
   int get quality;
   ResolutionPreset get resolutionPreset;
-  bool get showOverlay;
   OverlaySize? get overlaySize;
 }
 
@@ -18,18 +18,17 @@ class CameraPickerConfig extends Config {
   ResolutionPreset get resolutionPreset => ResolutionPreset.high;
 
   @override
-  final bool showOverlay;
-
-  @override
   final OverlaySize? overlaySize;
 
   final bool autoCropping;
 
+  final Watermark? watermark;
+
   CameraPickerConfig({
     this.quality = 100,
-    this.showOverlay = true,
     this.overlaySize,
     this.autoCropping = false,
+    this.watermark,
   });
 }
 
@@ -39,9 +38,6 @@ class CameraScannerConfig extends Config {
 
   @override
   ResolutionPreset get resolutionPreset => ResolutionPreset.high;
-
-  @override
-  bool get showOverlay => true;
 
   @override
   OverlaySize? get overlaySize => null;
@@ -65,9 +61,6 @@ class CameraVideoConfig extends Config {
 
   @override
   final ResolutionPreset resolutionPreset;
-
-  @override
-  bool get showOverlay => false;
 
   @override
   OverlaySize? get overlaySize => null;
