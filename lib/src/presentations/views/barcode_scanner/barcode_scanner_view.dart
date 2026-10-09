@@ -38,6 +38,7 @@ class _BarcodeScannerViewState extends State<BarcodeScannerView>
   Rect? _boundingBox;
   bool _isProcessing = false;
   bool _isAnimating = false;
+  bool _hasNotified = false;
 
   @override
   void initState() {
@@ -70,7 +71,8 @@ class _BarcodeScannerViewState extends State<BarcodeScannerView>
     if (_controller.status == AnimationStatus.completed) {
       _controller.reset();
 
-      if (_barcodeValue != null) {
+      if (_barcodeValue != null && !_hasNotified) {
+        _hasNotified = true;
         _initialRect = _boundingBox;
         widget.onBarcodeScanned?.call(_barcodeValue);
       }
@@ -129,7 +131,7 @@ class _BarcodeScannerViewState extends State<BarcodeScannerView>
   }
 
   Future<void> _processImage(DataStreamCamera? data) async {
-    if (_isProcessing || _isAnimating) return;
+    if (_isProcessing || _isAnimating || _hasNotified) return;
     _isProcessing = true;
     try {
       final inputImage = await _convertCameraData(data);
@@ -159,7 +161,8 @@ class _BarcodeScannerViewState extends State<BarcodeScannerView>
         _controller.forward();
       } else {
         final isInside = isRectInside(_boundingBox!, _initialRect!);
-        if (mounted && isInside) {
+        if (mounted && isInside && !_hasNotified) {
+          _hasNotified = true;
           _barcodeValue = barcode.displayValue;
           widget.onBarcodeScanned?.call(_barcodeValue);
         }

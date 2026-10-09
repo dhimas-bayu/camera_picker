@@ -75,6 +75,18 @@ class CameraPicker extends StatefulWidget {
 }
 
 class _CameraPickerState extends State<CameraPicker> {
+  bool _didPop = false;
+
+  void _safePop<T>(T result) {
+    if (_didPop) return;
+    _didPop = true;
+    if (!mounted) return;
+    final navigator = Navigator.of(context, rootNavigator: true);
+    if (navigator.canPop()) {
+      navigator.pop<T>(result);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -96,7 +108,7 @@ class _CameraPickerState extends State<CameraPicker> {
                   cameras: cameras,
                   config: widget.config as CameraPickerConfig,
                   onTakePicture: (file) {
-                    Navigator.pop(context, file);
+                    _safePop(file);
                   },
                 ),
                 CameraMode.scanBarcode => BarcodeScannerView(
@@ -104,14 +116,14 @@ class _CameraPickerState extends State<CameraPicker> {
                   config: widget.config as CameraScannerConfig,
                   onBarcodeScanned: (value) async {
                     await Future.delayed(Durations.long4);
-                    Navigator.pop(context, value);
+                    _safePop(value);
                   },
                 ),
                 CameraMode.videoRecord => VideoRecordView(
                   cameras: cameras,
                   config: widget.config as CameraVideoConfig,
                   onRecorded: (file) {
-                    Navigator.pop(context, file);
+                    _safePop(file);
                   },
                 ),
               };
