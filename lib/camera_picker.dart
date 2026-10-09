@@ -103,7 +103,7 @@ class _CameraPickerState extends State<CameraPicker> {
                   cameras: cameras,
                   config: widget.config as CameraScannerConfig,
                   onBarcodeScanned: (value) async {
-                    await Future.delayed(Durations.medium4);
+                    await Future.delayed(Durations.long4);
                     Navigator.pop(context, value);
                   },
                 ),
