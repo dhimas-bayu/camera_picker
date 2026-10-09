@@ -13,10 +13,10 @@ export 'package:camera/camera.dart' show ResolutionPreset, availableCameras;
 export 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart'
     show BarcodeFormat;
 
-export 'src/presentations/painters/camera_overlay_painter.dart';
 export 'src/core/models/camera_config.dart';
 export 'src/core/models/overlay_size.dart';
 export 'src/core/models/watermark.dart';
+export 'src/presentations/painters/camera_overlay_painter.dart';
 
 enum CameraMode { takePicture, scanBarcode, videoRecord }
 
@@ -102,7 +102,8 @@ class _CameraPickerState extends State<CameraPicker> {
                 CameraMode.scanBarcode => BarcodeScannerView(
                   cameras: cameras,
                   config: widget.config as CameraScannerConfig,
-                  onBarcodeScanned: (value) {
+                  onBarcodeScanned: (value) async {
+                    await Future.delayed(Durations.medium4);
                     Navigator.pop(context, value);
                   },
                 ),
